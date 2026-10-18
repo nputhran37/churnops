@@ -1,0 +1,71 @@
+{
+  "categorical": {
+    "contract": {
+      "mode": "Month-to-month"
+    },
+    "dependents": {
+      "mode": "No"
+    },
+    "device_protection": {
+      "mode": "No"
+    },
+    "gender": {
+      "mode": "Female"
+    },
+    "internet_service": {
+      "mode": "Fiber optic"
+    },
+    "multiple_lines": {
+      "mode": "No"
+    },
+    "online_backup": {
+      "mode": "No"
+    },
+    "online_security": {
+      "mode": "No"
+    },
+    "paperless_billing": {
+      "mode": "Yes"
+    },
+    "partner": {
+      "mode": "No"
+    },
+    "payment_method": {
+      "mode": "Electronic check"
+    },
+    "phone_service": {
+      "mode": "Yes"
+    },
+    "senior_citizen": {
+      "mode": "0"
+    },
+    "streaming_movies": {
+      "mode": "No"
+    },
+    "streaming_tv": {
+      "mode": "No"
+    },
+    "tech_support": {
+      "mode": "No"
+    }
+  },
+  "fitted_from": "synthetic:telco-priors",
+  "numeric": {
+    "monthly_charges": {
+      "mean": 61.3232,
+      "median": 62.135,
+      "std": 25.45
+    },
+    "tenure": {
+      "mean": 33.4403,
+      "median": 31.0,
+      "std": 22.613
+    },
+    "total_charges": {
+      "mean": 2029.1275,
+      "median": 1592.69,
+      "std": 1702.6784
+    }
+  },
+  "version": "1.0.0"
+}

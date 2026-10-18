@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ModelTrainedEvent",
+  "type": "object",
+  "required": [
+    "event_type",
+    "schema_version",
+    "trace_id",
+    "batch_id",
+    "model_version",
+    "model_artifact_uri",
+    "pipeline_run_id",
+    "metrics",
+    "emitted_at"
+  ],
+  "properties": {
+    "event_type": { "type": "string", "const": "model.trained" },
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "trace_id": { "type": "string" },
+    "batch_id": { "type": "string" },
+    "model_version": { "type": "string" },
+    "model_artifact_uri": { "type": "string", "format": "uri" },
+    "pipeline_run_id": { "type": "string" },
+    "git_sha": { "type": "string" },
+    "metrics": {
+      "type": "object",
+      "required": ["roc_auc", "recall_at_70_precision", "brier_score"],
+      "properties": {
+        "roc_auc": { "type": "number" },
+        "recall_at_70_precision": { "type": "number" },
+        "brier_score": { "type": "number" },
+        "champion_roc_auc": { "type": "number" }
+      }
+    },
+    "emitted_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

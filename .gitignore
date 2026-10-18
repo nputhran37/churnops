@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+dist/
+build/
+*.egg-info/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!terraform.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local runtime data & scratch (the data plane rebuilds all of this with `make seed`)
+data/landing/
+data/quarantine/
+data/warehouse/
+data/events_outbox/
+data/predictions_log/
+data/llm_calls/
+reports/
+artifacts/models/v-*
+*.parquet
+
+# Fitted artifacts are reproducible from the seed; keep the contract copy only
+data/generator/profile.json
+!contracts/feature_stats.json
+
+# Seed extract is downloaded, not committed
+data/seed/
+
+# Environment keys
+.env
+*.pem
+*.key
+credentials.json
+service_account.json

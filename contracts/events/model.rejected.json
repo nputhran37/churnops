@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ModelRejectedEvent",
+  "type": "object",
+  "required": [
+    "event_type",
+    "schema_version",
+    "trace_id",
+    "batch_id",
+    "rejected_model_version",
+    "stage",
+    "reasons",
+    "emitted_at"
+  ],
+  "properties": {
+    "event_type": { "type": "string", "const": "model.rejected" },
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "trace_id": { "type": "string" },
+    "batch_id": { "type": "string" },
+    "rejected_model_version": { "type": "string" },
+    "stage": { "type": "string", "enum": ["validation", "evaluation_gate", "canary_delivery"] },
+    "reasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "metrics": { "type": "object" },
+    "emitted_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,74 @@
+# ChurnOps drift decision policy (Person 1, Phase D)
+#
+# The detector contains no thresholds: every number that decides "none / warn /
+# critical" lives here, so tuning the platform's sensitivity is a config PR that
+# P2 and P3 can review without reading Python.
+version: "2.0.0"
+
+thresholds:
+  numeric_psi:
+    warn: 0.10
+    critical: 0.20
+
+  categorical_jensen_shannon:
+    warn: 0.08
+    critical: 0.15
+
+  share_of_drifted_features:
+    warn: 0.20
+    critical: 0.30
+
+  prediction_drift_ks_p_value:
+    warn: 0.05
+    critical: 0.01
+
+# Any of these firing critical on its own escalates the whole batch: these are the
+# features the champion leans on most (from P2's model importances, reviewed jointly).
+top_priority_features:
+  - "monthly_charges"
+  - "tenure"
+  - "contract"
+  - "total_charges"
+  - "internet_service"
+
+# Features compared on every run. Numeric/categorical split is read from
+# contracts/features.yaml; listing them here keeps report size and cost predictable.
+monitored_features:
+  numeric:
+    - "tenure"
+    - "monthly_charges"
+    - "total_charges"
+  categorical:
+    - "contract"
+    - "internet_service"
+    - "payment_method"
+    - "online_security"
+    - "tech_support"
+    - "streaming_tv"
+    - "paperless_billing"
+
+psi_buckets: 10
+
+# Minimum rows before a verdict is trusted; smaller batches are reported as "none"
+# with a note, so a half-empty batch can never trigger a retrain.
+min_rows_for_verdict: 100
+
+prediction_drift:
+  enabled: true
+  # Where the current scores come from, in order of preference.
+  sources: ["prediction_api", "predictions_log", "offline_baseline"]
+  sample_rows: 600
+  request_timeout_seconds: 10
+
+# One drifted week must not launch ten trainings.
+cooldown:
+  hours: 4
+  # A cooldown-suppressed batch still writes a drift_reports row and an HTML report;
+  # it just does not publish drift.detected.
+  escalate_if_severity_increases: true
+
+auto_trigger_retraining_severity: "critical"
+
+report:
+  html: true
+  evidently: true   # use Evidently's data-drift preset for the HTML when installed

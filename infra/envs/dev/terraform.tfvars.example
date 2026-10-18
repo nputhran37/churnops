@@ -1,0 +1,3 @@
+project_id = "my-gcp-churnops-project"
+region     = "us-central1"
+image_tag  = "latest"

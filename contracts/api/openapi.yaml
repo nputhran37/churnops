@@ -1,0 +1,192 @@
+openapi: 3.0.3
+info:
+  title: ChurnOps Prediction Service
+  description: Low-latency FastAPI churn inference service for real-time and batch scoring.
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns service status, uptime, and loaded model readiness.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, model_loaded, timestamp]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  model_loaded:
+                    type: boolean
+                    example: true
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /version:
+    get:
+      summary: Service & model version metadata
+      description: Returns the currently served model version, registry alias, and git SHA.
+      operationId: getVersion
+      responses:
+        '200':
+          description: Version metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [model_version, model_alias, git_sha, service_version]
+                properties:
+                  model_version:
+                    type: string
+                    example: "v3"
+                  model_alias:
+                    type: string
+                    example: "champion"
+                  git_sha:
+                    type: string
+                    example: "a1b2c3d"
+                  service_version:
+                    type: string
+                    example: "1.0.0"
+
+  /predict:
+    post:
+      summary: Churn prediction (single customer or batch)
+      description: Accepts customer features conforming to features.yaml and returns churn probability + classification.
+      operationId: predictChurn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instances]
+              properties:
+                trace_id:
+                  type: string
+                  example: "tr-20261002-demo-001"
+                instances:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CustomerFeatures'
+      responses:
+        '200':
+          description: Successful predictions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [model_version, predictions, latency_ms]
+                properties:
+                  model_version:
+                    type: string
+                    example: "v3"
+                  predictions:
+                    type: array
+                    items:
+                      type: object
+                      required: [customer_id, churn_probability, churn_prediction]
+                      properties:
+                        customer_id:
+                          type: string
+                        churn_probability:
+                          type: number
+                          format: float
+                          example: 0.78
+                        churn_prediction:
+                          type: integer
+                          example: 1
+                  latency_ms:
+                    type: number
+                    format: float
+                    example: 14.2
+        '422':
+          description: Validation error for out-of-schema customer features
+
+components:
+  schemas:
+    CustomerFeatures:
+      type: object
+      required:
+        - customer_id
+        - tenure
+        - monthly_charges
+        - total_charges
+        - contract
+      properties:
+        customer_id:
+          type: string
+          example: "7590-VHVEG"
+        gender:
+          type: string
+          enum: ["Male", "Female"]
+        senior_citizen:
+          type: integer
+          enum: [0, 1]
+        partner:
+          type: string
+          enum: ["Yes", "No"]
+        dependents:
+          type: string
+          enum: ["Yes", "No"]
+        tenure:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 12
+        phone_service:
+          type: string
+          enum: ["Yes", "No"]
+        multiple_lines:
+          type: string
+          enum: ["Yes", "No", "No phone service"]
+        internet_service:
+          type: string
+          enum: ["DSL", "Fiber optic", "No"]
+        online_security:
+          type: string
+          enum: ["Yes", "No", "No internet service"]
+        online_backup:
+          type: string
+          enum: ["Yes", "No", "No internet service"]
+        device_protection:
+          type: string
+          enum: ["Yes", "No", "No internet service"]
+        tech_support:
+          type: string
+          enum: ["Yes", "No", "No internet service"]
+        streaming_tv:
+          type: string
+          enum: ["Yes", "No", "No internet service"]
+        streaming_movies:
+          type: string
+          enum: ["Yes", "No", "No internet service"]
+        contract:
+          type: string
+          enum: ["Month-to-month", "One year", "Two year"]
+        paperless_billing:
+          type: string
+          enum: ["Yes", "No"]
+        payment_method:
+          type: string
+          enum:
+            - "Electronic check"
+            - "Mailed check"
+            - "Bank transfer (automatic)"
+            - "Credit card (automatic)"
+        monthly_charges:
+          type: number
+          minimum: 10.0
+          maximum: 200.0
+          example: 79.85
+        total_charges:
+          type: number
+          minimum: 0.0
+          maximum: 15000.0
+          example: 958.2

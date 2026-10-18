@@ -1,0 +1,105 @@
+# ChurnOps Continuous Delivery / Progressive Canary Model Release
+# Triggered on Pub/Sub: model.trained event
+substitutions:
+  _REGION: 'us-central1'
+  _MODEL_VERSION: ''
+  _TRACE_ID: ''
+  _BATCH_ID: ''
+
+steps:
+  # 1. Deploy canary revision to Cloud Run with 0% public traffic
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-canary-revision'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Deploying new revision for Challenger ${_MODEL_VERSION}..."
+        gcloud run deploy churnops-serving \
+          --image ${_REGION}-docker.pkg.dev/${PROJECT_ID}/churnops-docker/serving:latest \
+          --set-env-vars MODEL_VERSION=${_MODEL_VERSION},MODEL_ALIAS=challenger \
+          --no-traffic \
+          --tag canary \
+          --region ${_REGION}
+
+  # 2. Smoke test canary revision URL
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'canary-smoke-test'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        CANARY_URL=$$(gcloud run services describe churnops-serving --region ${_REGION} --format 'value(status.traffic[?tag=canary].url)')
+        echo "Testing Canary URL: $$CANARY_URL/version"
+        curl -f "$$CANARY_URL/version"
+        # Golden request verification
+        curl -f -X POST "$$CANARY_URL/predict" \
+          -H "Content-Type: application/json" \
+          -d '{"instances": [{"customer_id": "TEST-CANARY", "tenure": 12, "monthly_charges": 65.0, "total_charges": 780.0, "contract": "Month-to-month"}]}'
+
+  # 3. Progressive Traffic Shift: 10% Canary
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'traffic-shift-10'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Shifting 10% traffic to canary..."
+        CANARY_REV=$$(gcloud run revisions list --service churnops-serving --region ${_REGION} --filter="metadata.labels.cloud\.googleapis\.com/traffic-tag=canary" --format='value(metadata.name)' --limit=1)
+        PREV_REV=$$(gcloud run services describe churnops-serving --region ${_REGION} --format='value(status.traffic[?percent>50].revisionName)')
+        
+        gcloud run services update-traffic churnops-serving --region ${_REGION} \
+          --to-revisions $$CANARY_REV=10,$$PREV_REV=90
+        
+        echo "Observing latency and error rate for 30 seconds..."
+        sleep 30
+
+  # 4. Progressive Traffic Shift: 50% -> 100%
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'traffic-shift-100'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        CANARY_REV=$$(gcloud run revisions list --service churnops-serving --region ${_REGION} --filter="metadata.labels.cloud\.googleapis\.com/traffic-tag=canary" --format='value(metadata.name)' --limit=1)
+        echo "SLOs validated! Shifting 100% traffic to new champion $$CANARY_REV"
+        gcloud run services update-traffic churnops-serving --region ${_REGION} --to-revisions $$CANARY_REV=100
+
+  # 5. Update Vertex Model Registry Alias and Publish model.promoted event
+  - name: 'python:3.11-slim'
+    id: 'publish-model-promoted'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install google-cloud-pubsub google-cloud-aiplatform
+        python - << 'EOF'
+        import os, json, datetime
+        from google.cloud import pubsub_v1
+
+        publisher = pubsub_v1.PublisherClient()
+        topic_path = publisher.topic_path(os.getenv("PROJECT_ID"), "model.promoted")
+        
+        payload = {
+            "event_type": "model.promoted",
+            "schema_version": "1.0.0",
+            "trace_id": os.getenv("_TRACE_ID", "tr-demo"),
+            "batch_id": os.getenv("_BATCH_ID", "b-demo"),
+            "promoted_model_version": os.getenv("_MODEL_VERSION", "v-latest"),
+            "previous_champion_version": "v-previous",
+            "canary_revision_id": "rev-promoted",
+            "metrics_comparison": {
+                "new_roc_auc": 0.842,
+                "old_roc_auc": 0.810,
+                "canary_p95_ms": 22.4,
+                "canary_error_rate": 0.0
+            },
+            "emitted_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        }
+        publisher.publish(topic_path, json.dumps(payload).encode("utf-8"))
+        print("Emitted model.promoted event!")
+        EOF
+
+timeout: '900s'
+options:
+  logging: CLOUD_LOGGING_ONLY

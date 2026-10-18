@@ -1,0 +1,12 @@
+[
+  {"name": "model_version", "type": "STRING", "mode": "REQUIRED", "description": "The champion model version this reference represents"},
+  {"name": "feature_name", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "dtype", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "mean", "type": "FLOAT", "mode": "NULLABLE"},
+  {"name": "std", "type": "FLOAT", "mode": "NULLABLE"},
+  {"name": "quantiles", "type": "STRING", "mode": "NULLABLE", "description": "JSON serialized quantile distribution {q10, q25, q50, q75, q90}"},
+  {"name": "category_distribution", "type": "STRING", "mode": "NULLABLE", "description": "JSON serialized frequencies for categories"},
+  {"name": "sample_count", "type": "INTEGER", "mode": "REQUIRED"},
+  {"name": "snapshot_date", "type": "DATE", "mode": "REQUIRED"},
+  {"name": "updated_at", "type": "TIMESTAMP", "mode": "REQUIRED"}
+]

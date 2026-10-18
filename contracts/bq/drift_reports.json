@@ -1,0 +1,88 @@
+[
+  {
+    "name": "report_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "batch_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "batch_date",
+    "type": "DATE",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "trace_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "severity",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "none, warn, critical"
+  },
+  {
+    "name": "dataset_drift_detected",
+    "type": "BOOLEAN",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "share_of_drifted_features",
+    "type": "FLOAT",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "top_drifted_features",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "JSON array of [{feature, metric, score, threshold}]"
+  },
+  {
+    "name": "prediction_drift_p_value",
+    "type": "FLOAT",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "gcs_report_html_uri",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "gcs_report_json_uri",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "realised_auc",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Populated when delayed labels arrive"
+  },
+  {
+    "name": "created_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "published_event",
+    "type": "BOOLEAN",
+    "mode": "NULLABLE",
+    "description": "Whether drift.detected was published (false when suppressed by the cooldown window)"
+  },
+  {
+    "name": "realised_auc_computed_at",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "When realised_auc was backfilled from delayed labels"
+  },
+  {
+    "name": "realised_label_count",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of delayed labels used for realised_auc"
+  }
+]

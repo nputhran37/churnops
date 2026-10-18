@@ -1,0 +1,11 @@
+[
+  {"name": "request_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "trace_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "model_version", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "customer_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "features_hash", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "churn_probability", "type": "FLOAT", "mode": "REQUIRED"},
+  {"name": "prediction", "type": "INTEGER", "mode": "REQUIRED"},
+  {"name": "latency_ms", "type": "FLOAT", "mode": "REQUIRED"},
+  {"name": "logged_at", "type": "TIMESTAMP", "mode": "REQUIRED"}
+]

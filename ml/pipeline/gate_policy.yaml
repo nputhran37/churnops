@@ -1,0 +1,23 @@
+# ChurnOps Model Evaluation & Quality Gate Policy (Person 2)
+version: "1.0.0"
+
+gates:
+  roc_auc:
+    min_absolute: 0.750
+    # Challenger must not degrade more than 0.005 compared to current champion
+    max_degradation_vs_champion: 0.005
+
+  recall_at_70_precision:
+    min_absolute: 0.400
+    require_improvement_vs_champion: false
+
+  brier_score:
+    max_threshold: 0.200
+
+  sanity_checks:
+    max_churn_rate_prediction: 0.50
+    min_churn_rate_prediction: 0.05
+    critical_features_must_have_importance:
+      - "monthly_charges"
+      - "tenure"
+      - "contract"

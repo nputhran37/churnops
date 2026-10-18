@@ -1,0 +1,175 @@
+{
+  "displayName": "ChurnOps - Data Quality & Drift (owned by P1, applied by P3)",
+  "mosaicLayout": {
+    "columns": 12,
+    "tiles": [
+      {
+        "width": 6,
+        "height": 4,
+        "widget": {
+          "title": "Rows ingested per batch",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"logging.googleapis.com/user/churnops/rows_ingested\"",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_SUM"
+                    }
+                  }
+                },
+                "plotType": "LINE"
+              }
+            ],
+            "yAxis": { "label": "rows", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "width": 6,
+        "height": 4,
+        "widget": {
+          "title": "Quarantined batches (alert if > 0 in 24h)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"logging.googleapis.com/user/churnops/batches_quarantined\"",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_SUM",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": ["metric.label.rule"]
+                    }
+                  }
+                },
+                "plotType": "STACKED_BAR"
+              }
+            ],
+            "yAxis": { "label": "batches", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "width": 12,
+        "height": 4,
+        "widget": {
+          "title": "PSI per feature over time (warn 0.10 / critical 0.20)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"logging.googleapis.com/user/churnops/feature_psi_score\"",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_MAX",
+                      "crossSeriesReducer": "REDUCE_MAX",
+                      "groupByFields": ["metric.label.feature"]
+                    }
+                  }
+                },
+                "plotType": "LINE"
+              }
+            ],
+            "thresholds": [
+              { "value": 0.10, "label": "warn", "color": "YELLOW" },
+              { "value": 0.20, "label": "critical", "color": "RED" }
+            ],
+            "yAxis": { "label": "PSI", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "width": 4,
+        "height": 4,
+        "widget": {
+          "title": "Drift verdicts by severity",
+          "pieChart": {
+            "chartType": "DONUT",
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"logging.googleapis.com/user/churnops/drift_verdicts\"",
+                    "aggregation": {
+                      "alignmentPeriod": "86400s",
+                      "perSeriesAligner": "ALIGN_SUM",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": ["metric.label.severity"]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "width": 4,
+        "height": 4,
+        "widget": {
+          "title": "Null fraction per feature (contract limit 2%)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"logging.googleapis.com/user/churnops/feature_null_fraction\"",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_MAX",
+                      "crossSeriesReducer": "REDUCE_MAX",
+                      "groupByFields": ["metric.label.feature"]
+                    }
+                  }
+                },
+                "plotType": "LINE"
+              }
+            ],
+            "thresholds": [{ "value": 0.02, "label": "contract limit", "color": "RED" }],
+            "yAxis": { "label": "null fraction", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "width": 4,
+        "height": 4,
+        "widget": {
+          "title": "Ingest latency p95 (job duration)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"logging.googleapis.com/user/churnops/ingest_latency_ms\"",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_PERCENTILE_95"
+                    }
+                  }
+                },
+                "plotType": "LINE"
+              }
+            ],
+            "yAxis": { "label": "ms", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "width": 12,
+        "height": 4,
+        "widget": {
+          "title": "Did drift predict degradation? Realised champion AUC by verdict (BigQuery: drift_reports)",
+          "text": {
+            "content": "SELECT severity, AVG(realised_auc) AS mean_realised_auc, COUNT(*) AS batches\nFROM `${PROJECT_ID}.churnops.drift_reports`\nWHERE realised_auc IS NOT NULL\nGROUP BY severity ORDER BY mean_realised_auc;\n\nRendered in the Looker Studio report; kept here so the query ships with the dashboards.",
+            "format": "RAW"
+          }
+        }
+      }
+    ]
+  }
+}

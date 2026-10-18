@@ -1,0 +1,61 @@
+# ChurnOps Continuous Integration (CI) Pipeline
+# Triggered on Pull Requests
+steps:
+  # 1. Code Linting & Static Analysis
+  - name: 'python:3.11-slim'
+    id: 'lint-and-format'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install ruff mypy
+        echo "Running Ruff code linter..."
+        ruff check .
+        echo "Running Mypy static type checker..."
+        mypy --ignore-missing-imports data/ ml/ llm/ ops/
+
+  # 2. Contract Verification Tests
+  - name: 'python:3.11-slim'
+    id: 'contract-tests'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install jsonschema pyyaml pydantic pandera openapi-spec-validator
+        python tests/integration/test_contracts.py
+
+  # 3. Unit Tests per package
+  - name: 'python:3.11-slim'
+    id: 'unit-tests'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install pytest scikit-learn pandas numpy scipy pydantic pyyaml
+        pytest tests/unit/
+
+  # 4. Terraform Validation & Plan
+  - name: 'hashicorp/terraform:1.15.8'
+    id: 'terraform-validate-plan'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd infra/envs/dev
+        terraform init -backend=false
+        terraform fmt -check -recursive ../../
+        terraform validate
+
+  # 5. LLMOps Prompt Evaluation Suite
+  - name: 'python:3.11-slim'
+    id: 'llm-eval-suite'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install pyyaml pydantic requests
+        python llm/evals/eval_runner.py
+
+timeout: '900s'
+options:
+  logging: CLOUD_LOGGING_ONLY

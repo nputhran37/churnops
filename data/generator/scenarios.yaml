@@ -1,0 +1,134 @@
+# ChurnOps drift scenario catalogue (Person 1)
+#
+# Every scenario is pure configuration: a list of operations the generic engine in
+# scenarios.py applies to a freshly sampled batch. `severity` (0-1) scales each
+# operation's magnitude/fraction linearly, so SEVERITY=0.5 is half the shift.
+# Adding a scenario is a YAML change plus a golden test - never new Python.
+#
+# Operation types understood by the engine:
+#   multiplicative_shift  value *= 1 + magnitude * severity          (negative magnitude shrinks)
+#   additive_shift        value += magnitude * severity
+#   noise_scale           value = mean + (value - mean) * (1 + magnitude * severity)
+#   category_shift        a fraction * severity of rows move to `value`
+#   new_category          a fraction * severity of rows get an unseen category `value`
+#   label_odds_shift      churn odds *= 1 + magnitude * severity (simulates real degradation)
+#   null_injection        a fraction * severity of values are set to NULL (data-quality incident)
+#   range_violation       a fraction * severity of values are forced out of contract range
+#
+# Optional keys per operation: segments (customer_segment filter), min_value, max_value,
+# clip_to_contract (default true; set false deliberately to trip validation).
+
+version: "2.0.0"
+
+scenarios:
+  none:
+    description: "Stationary traffic sampled straight from the fitted reference distribution"
+    business_narrative: "Nothing happened today; the platform should stay silent."
+    expected_drift: []
+    expect_quarantine: false
+    operations: []
+
+  price_hike:
+    description: "Across-the-board subscription price increase (+25% at severity 1.0)"
+    business_narrative: >-
+      Finance pushed a list-price increase live on all plans. Billing amounts jump
+      immediately while tenure and plan mix stay put, so monthly_charges is the
+      first feature to move.
+    expected_drift: ["monthly_charges", "total_charges"]
+    expect_quarantine: false
+    operations:
+      - feature: monthly_charges
+        type: multiplicative_shift
+        magnitude: 0.25
+      - feature: total_charges
+        type: multiplicative_shift
+        magnitude: 0.15
+      - feature: churn
+        type: label_odds_shift
+        magnitude: 0.45
+
+  competitor_launch:
+    description: "A rival launches a cheaper plan; Standard subscribers churn earlier and pay less"
+    business_narrative: >-
+      A competitor entered the market with an aggressive introductory offer. The
+      Standard and Premium segments lose their long-tenured customers and
+      discounts spread, so tenure collapses and monthly_charges drifts downwards.
+    expected_drift: ["tenure", "monthly_charges"]
+    expect_quarantine: false
+    operations:
+      - feature: tenure
+        type: multiplicative_shift
+        magnitude: -0.60
+        segments: ["Standard", "Premium"]
+        min_value: 1
+      - feature: monthly_charges
+        type: multiplicative_shift
+        magnitude: -0.25
+        segments: ["Standard", "Premium"]
+      - feature: churn
+        type: label_odds_shift
+        magnitude: 0.60
+        segments: ["Standard", "Premium"]
+
+  new_plan:
+    description: "Product ships a contract type the model has never seen"
+    business_narrative: >-
+      Marketing launched a 'Flexible-Monthly' contract. The value is legitimate
+      upstream but unknown to the champion model and to contracts/features.yaml,
+      so the batch is quarantined until the contract is bumped - exactly the
+      behaviour the runbook describes.
+    expected_drift: ["contract"]
+    expect_quarantine: true
+    operations:
+      - feature: contract
+        type: new_category
+        value: "Flexible-Monthly"
+        fraction: 0.35
+        clip_to_contract: false
+
+  seasonal_spike:
+    description: "Festive season: streaming add-ons and bills surge for consumer segments"
+    business_narrative: >-
+      A holiday campaign bundled streaming into consumer plans. Streaming flags and
+      charges rise together while churn barely moves, so this should read as a warn,
+      not an emergency, at low severity.
+    expected_drift: ["streaming_tv", "streaming_movies", "monthly_charges"]
+    expect_quarantine: false
+    operations:
+      - feature: streaming_tv
+        type: category_shift
+        value: "Yes"
+        fraction: 0.85
+        segments: ["Standard", "Premium"]
+      - feature: streaming_movies
+        type: category_shift
+        value: "Yes"
+        fraction: 0.80
+        segments: ["Standard", "Premium"]
+      - feature: monthly_charges
+        type: multiplicative_shift
+        magnitude: 0.20
+        segments: ["Standard", "Premium"]
+      - feature: total_charges
+        type: multiplicative_shift
+        magnitude: 0.30
+        segments: ["Standard", "Premium"]
+
+  corrupt_batch:
+    description: "Upstream ETL regression: null customer attributes and impossible values"
+    business_narrative: >-
+      The source system shipped a bad release: tenure arrives negative and charges
+      arrive null. Nothing should reach BigQuery - the batch belongs in quarantine
+      with a structured error and an alert.
+    expected_drift: []
+    expect_quarantine: true
+    operations:
+      - feature: tenure
+        type: range_violation
+        fraction: 0.10
+        value: -5
+        clip_to_contract: false
+      - feature: monthly_charges
+        type: null_injection
+        fraction: 0.08
+        clip_to_contract: false

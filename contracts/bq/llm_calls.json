@@ -1,0 +1,15 @@
+[
+  {"name": "call_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "trace_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "event_type", "type": "STRING", "mode": "REQUIRED", "description": "drift.detected, model.promoted, model.rejected"},
+  {"name": "prompt_version", "type": "STRING", "mode": "REQUIRED", "description": "e.g. v1, v2"},
+  {"name": "model_name", "type": "STRING", "mode": "REQUIRED", "description": "e.g. gemini-1.5-flash"},
+  {"name": "input_tokens", "type": "INTEGER", "mode": "REQUIRED"},
+  {"name": "output_tokens", "type": "INTEGER", "mode": "REQUIRED"},
+  {"name": "estimated_cost_usd", "type": "FLOAT", "mode": "REQUIRED"},
+  {"name": "latency_ms", "type": "FLOAT", "mode": "REQUIRED"},
+  {"name": "guardrail_passed", "type": "BOOLEAN", "mode": "REQUIRED"},
+  {"name": "fallback_used", "type": "BOOLEAN", "mode": "REQUIRED"},
+  {"name": "response_json", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "created_at", "type": "TIMESTAMP", "mode": "REQUIRED"}
+]

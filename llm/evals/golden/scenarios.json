@@ -1,0 +1,61 @@
+[
+  {
+    "scenario_id": "scen-price-hike-01",
+    "description": "Price hike shift causing MonthlyCharges spike",
+    "event_payload": {
+      "event_type": "drift.detected",
+      "schema_version": "1.0.0",
+      "trace_id": "tr-eval-001",
+      "batch_id": "b-eval-01",
+      "severity": "critical",
+      "share_of_drifted_features": 0.35,
+      "drifted_features": [
+        {"feature": "monthly_charges", "metric": "psi", "score": 0.284, "threshold": 0.20},
+        {"feature": "total_charges", "metric": "psi", "score": 0.215, "threshold": 0.20}
+      ],
+      "prediction_drift_p_value": 0.003
+    },
+    "expected_top_features": ["monthly_charges"],
+    "expected_min_faithfulness": 1.0
+  },
+  {
+    "scenario_id": "scen-competitor-02",
+    "description": "Competitor launch degrading tenure in standard tier",
+    "event_payload": {
+      "event_type": "drift.detected",
+      "schema_version": "1.0.0",
+      "trace_id": "tr-eval-002",
+      "batch_id": "b-eval-02",
+      "severity": "critical",
+      "share_of_drifted_features": 0.40,
+      "drifted_features": [
+        {"feature": "tenure", "metric": "psi", "score": 0.312, "threshold": 0.20},
+        {"feature": "monthly_charges", "metric": "psi", "score": 0.185, "threshold": 0.20}
+      ],
+      "prediction_drift_p_value": 0.001
+    },
+    "expected_top_features": ["tenure"],
+    "expected_min_faithfulness": 1.0
+  },
+  {
+    "scenario_id": "scen-promotion-03",
+    "description": "Successful canary promotion to champion",
+    "event_payload": {
+      "event_type": "model.promoted",
+      "schema_version": "1.0.0",
+      "trace_id": "tr-eval-003",
+      "batch_id": "b-eval-03",
+      "promoted_model_version": "v-20261002-02",
+      "previous_champion_version": "v-20260915-01",
+      "canary_revision_id": "rev-serving-002",
+      "metrics_comparison": {
+        "new_roc_auc": 0.842,
+        "old_roc_auc": 0.811,
+        "canary_p95_ms": 19.4,
+        "canary_error_rate": 0.0
+      }
+    },
+    "expected_top_features": [],
+    "expected_min_faithfulness": 1.0
+  }
+]

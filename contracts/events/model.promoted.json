@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ModelPromotedEvent",
+  "type": "object",
+  "required": [
+    "event_type",
+    "schema_version",
+    "trace_id",
+    "batch_id",
+    "promoted_model_version",
+    "previous_champion_version",
+    "canary_revision_id",
+    "emitted_at"
+  ],
+  "properties": {
+    "event_type": { "type": "string", "const": "model.promoted" },
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "trace_id": { "type": "string" },
+    "batch_id": { "type": "string" },
+    "promoted_model_version": { "type": "string" },
+    "previous_champion_version": { "type": "string" },
+    "canary_revision_id": { "type": "string" },
+    "metrics_comparison": {
+      "type": "object",
+      "properties": {
+        "new_roc_auc": { "type": "number" },
+        "old_roc_auc": { "type": "number" },
+        "canary_p95_ms": { "type": "number" },
+        "canary_error_rate": { "type": "number" }
+      }
+    },
+    "emitted_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

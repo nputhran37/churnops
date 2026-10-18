@@ -1,0 +1,156 @@
+# ChurnOps Feature Specification & Transformation Contract
+# Shared between Person 1 (Data & Drift) and Person 2 (ML & Serving)
+version: "1.0.0"
+dataset: "telco_churn"
+primary_key: "customer_id"
+target:
+  name: "churn"
+  dtype: "int64"
+  description: "Whether the customer churned within the evaluation window (1=churned, 0=retained)"
+
+features:
+  - name: "gender"
+    dtype: "string"
+    allowed_values: ["Male", "Female"]
+    transform: "one_hot"
+    impute: "mode"
+
+  - name: "senior_citizen"
+    dtype: "int64"
+    allowed_values: [0, 1]
+    transform: "identity"
+    impute: 0
+
+  - name: "partner"
+    dtype: "string"
+    allowed_values: ["Yes", "No"]
+    transform: "binary_encode"
+    impute: "No"
+
+  - name: "dependents"
+    dtype: "string"
+    allowed_values: ["Yes", "No"]
+    transform: "binary_encode"
+    impute: "No"
+
+  - name: "tenure"
+    dtype: "int64"
+    min: 0
+    max: 100
+    transform: "min_max_scale"
+    impute: 0
+
+  - name: "phone_service"
+    dtype: "string"
+    allowed_values: ["Yes", "No"]
+    transform: "binary_encode"
+    impute: "No"
+
+  - name: "multiple_lines"
+    dtype: "string"
+    allowed_values: ["Yes", "No", "No phone service"]
+    transform: "one_hot"
+    impute: "No"
+
+  - name: "internet_service"
+    dtype: "string"
+    allowed_values: ["DSL", "Fiber optic", "No"]
+    transform: "one_hot"
+    impute: "No"
+
+  - name: "online_security"
+    dtype: "string"
+    allowed_values: ["Yes", "No", "No internet service"]
+    transform: "one_hot"
+    impute: "No"
+
+  - name: "online_backup"
+    dtype: "string"
+    allowed_values: ["Yes", "No", "No internet service"]
+    transform: "one_hot"
+    impute: "No"
+
+  - name: "device_protection"
+    dtype: "string"
+    allowed_values: ["Yes", "No", "No internet service"]
+    transform: "one_hot"
+    impute: "No"
+
+  - name: "tech_support"
+    dtype: "string"
+    allowed_values: ["Yes", "No", "No internet service"]
+    transform: "one_hot"
+    impute: "No"
+
+  - name: "streaming_tv"
+    dtype: "string"
+    allowed_values: ["Yes", "No", "No internet service"]
+    transform: "one_hot"
+    impute: "No"
+
+  - name: "streaming_movies"
+    dtype: "string"
+    allowed_values: ["Yes", "No", "No internet service"]
+    transform: "one_hot"
+    impute: "No"
+
+  - name: "contract"
+    dtype: "string"
+    allowed_values: ["Month-to-month", "One year", "Two year"]
+    transform: "one_hot"
+    impute: "Month-to-month"
+
+  - name: "paperless_billing"
+    dtype: "string"
+    allowed_values: ["Yes", "No"]
+    transform: "binary_encode"
+    impute: "Yes"
+
+  - name: "payment_method"
+    dtype: "string"
+    allowed_values:
+      - "Electronic check"
+      - "Mailed check"
+      - "Bank transfer (automatic)"
+      - "Credit card (automatic)"
+    transform: "one_hot"
+    impute: "Electronic check"
+
+  - name: "monthly_charges"
+    dtype: "float64"
+    min: 10.0
+    max: 200.0
+    transform: "standard_scale"
+    impute: "median"
+
+  - name: "total_charges"
+    dtype: "float64"
+    min: 0.0
+    max: 15000.0
+    transform: "log1p"
+    impute: "median"
+
+metadata_fields:
+  - name: "customer_id"
+    dtype: "string"
+  - name: "batch_date"
+    dtype: "date"
+  - name: "batch_id"
+    dtype: "string"
+  - name: "customer_segment"
+    dtype: "string"
+    allowed_values: ["Standard", "Premium", "Enterprise"]
+
+# Batch-level data-quality rules enforced by data/ingest before anything reaches
+# BigQuery. A breach quarantines the whole batch (see docs/runbooks/batch_quarantined.md).
+validation:
+  min_rows: 50
+  max_null_fraction: 0.02          # per feature; rarer nulls are imputed per the transform spec
+  max_duplicate_key_fraction: 0.0  # customer_id must be unique within a batch
+  required_non_null:
+    - customer_id
+    - customer_segment
+    - batch_date
+    - batch_id
+    - trace_id
+  customer_id_pattern: "^CUST-[A-Z0-9]{4,}$"

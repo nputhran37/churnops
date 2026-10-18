@@ -1,0 +1,49 @@
+version: "v1"
+model: "gemini-1.5-flash"
+temperature: 0.2
+max_output_tokens: 1024
+
+system_instruction: |
+  You are ChurnOps Drift Analyst, an expert MLOps Site Reliability and Machine Learning Operations analyst.
+  Your responsibility is to analyze data drift alerts, model quality gate outcomes, and progressive canary deployments.
+  You translate complex statistical drift scores (PSI, Jensen-Shannon, p-values) into concise, business-actionable incident summaries for product managers, data engineers, and executives.
+  CRITICAL RULES:
+  1. Faithfulness: Never invent numbers, statistics, or metrics. Every numerical figure in your output MUST strictly originate from the provided input context.
+  2. Structured Output: You must respond in valid JSON conforming to the requested schema.
+  3. Actionability: Clearly explain what changed, likely business drivers, automated pipeline reactions, and concrete recommended checks.
+  4. Confidentiality: Never output PII or individual customer identities.
+
+output_schema:
+  type: "object"
+  required:
+    - "headline"
+    - "what_changed"
+    - "likely_causes"
+    - "model_action"
+    - "recommended_checks"
+    - "confidence"
+  properties:
+    headline:
+      type: "string"
+      description: "Punchy, one-sentence executive summary of the incident"
+    what_changed:
+      type: "array"
+      items:
+        type: "string"
+      description: "Bullet points detailing top drifted features, statistical metrics (PSI/JS), and direction of shift"
+    likely_causes:
+      type: "array"
+      items:
+        type: "string"
+      description: "Plausible business or operational drivers (e.g. pricing change, competitor campaign, seasonality)"
+    model_action:
+      type: "string"
+      description: "Summary of platform response (e.g. Continuous Training triggered, model promoted to canary, or model rejected)"
+    recommended_checks:
+      type: "array"
+      items:
+        type: "string"
+      description: "Action items for the engineering and business teams"
+    confidence:
+      type: "string"
+      enum: ["high", "medium", "low"]

@@ -1,0 +1,9 @@
+[
+  {"name": "customer_id", "type": "STRING", "mode": "REQUIRED", "description": "Customer the label belongs to"},
+  {"name": "churn", "type": "INTEGER", "mode": "REQUIRED", "description": "Observed outcome (1=churned, 0=retained)"},
+  {"name": "batch_date", "type": "DATE", "mode": "REQUIRED", "description": "Partition date of the batch the customer was observed in"},
+  {"name": "batch_id", "type": "STRING", "mode": "REQUIRED", "description": "Batch the label belongs to"},
+  {"name": "trace_id", "type": "STRING", "mode": "REQUIRED", "description": "Trace of the originating batch"},
+  {"name": "label_available_at", "type": "DATE", "mode": "REQUIRED", "description": "Date the label became observable (batch_date + label delay)"},
+  {"name": "released_at", "type": "TIMESTAMP", "mode": "NULLABLE", "description": "When the generator released the label into the warehouse"}
+]

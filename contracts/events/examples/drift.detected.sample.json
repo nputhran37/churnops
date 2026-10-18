@@ -1,0 +1,26 @@
+{
+  "event_type": "drift.detected",
+  "schema_version": "1.0.0",
+  "trace_id": "tr-20261002-demo-001",
+  "batch_id": "b-20261002-01",
+  "batch_date": "2026-10-02",
+  "severity": "critical",
+  "share_of_drifted_features": 0.35,
+  "drifted_features": [
+    {
+      "feature": "monthly_charges",
+      "metric": "psi",
+      "score": 0.284,
+      "threshold": 0.20
+    },
+    {
+      "feature": "contract",
+      "metric": "jensen_shannon",
+      "score": 0.195,
+      "threshold": 0.10
+    }
+  ],
+  "prediction_drift_p_value": 0.003,
+  "report_uri": "gs://proj-reports/drift/b-20261002-01/report.html",
+  "emitted_at": "2026-10-02T14:30:00Z"
+}
