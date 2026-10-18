@@ -127,8 +127,8 @@ make simulate SCENARIO=price_hike SEVERITY=0.8
 | 3 | **Drift service** computes PSI/KS per numeric feature, Jensen-Shannon/chi-square per categorical, and prediction drift against the champion's score distribution; writes `report.json`, `report.html` and a `drift_reports` row; publishes `drift.detected` unless the cooldown suppresses it |
 | 4 | **Drift Analyst** (Gemini) narrates the incident |
 | 5 | **Training pipeline** snapshots the labelled history, trains and gates the challenger |
-| 6 | **Progressive delivery** shifts traffic 10% → 50% → 100% |
-| 7 | **Drift service** refreshes the reference window to the new champion |
+| 6 | **Progressive delivery** shifts traffic 10% → 50% → 100% only when the challenger passes the quality gate; a rejected challenger leaves the current champion serving |
+| 7 | **Drift service** refreshes the reference window after promotion; it stays on the current champion when the challenger is rejected |
 | 8 | Two simulated weeks later the labels arrive and the realised champion AUC is backfilled onto the drift report — the proof the alert predicted degradation |
 
 ---

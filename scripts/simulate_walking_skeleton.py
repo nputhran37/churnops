@@ -139,6 +139,9 @@ def run_simulation(scenario: str = "price_hike", severity: float = 0.8, batch_si
     phase(5, "Trigger function launches the Vertex AI training pipeline")
     snapshot = write_training_snapshot(warehouse)
     print("  Steps: snapshot -> validate -> split -> train -> evaluate -> gate -> register")
+    challenger_auc = None
+    challenger_version = None
+    gate_passed = False
     try:
         import train
 
@@ -152,24 +155,33 @@ def run_simulation(scenario: str = "price_hike", severity: float = 0.8, batch_si
         challenger_auc = training["metrics"]["roc_auc"]
         ok(f"Snapshot: {snapshot['rows']} labelled rows")
         ok(f"Quality gate {training['status']} · challenger ROC-AUC {challenger_auc:.4f}")
-        model_version = training["model_version"]
+        challenger_version = training["model_version"]
+        gate_passed = training["status"] == "gate_passed"
     except Exception as exc:
-        print(f"  [!] Training pipeline unavailable ({exc}); narrating the remaining steps.")
-        challenger_auc, model_version = 0.0, "v-unknown"
+        print(f"  [!] Training pipeline unavailable ({exc}); retaining the current champion.")
 
     # ---- 6. canary ---------------------------------------------------------
     phase(6, "Cloud Build progressive delivery")
-    for split in (0, 10, 50, 100):
-        time.sleep(0.2)
-        print(f"  traffic {split:>3}% · p95 19.1 ms · errors 0.00%")
-    ok(f"Registry alias 'champion' moved to {model_version}; published model.promoted")
+    champion_version = window.model_version
+    if gate_passed:
+        for split in (0, 10, 50, 100):
+            time.sleep(0.2)
+            print(f"  traffic {split:>3}% · p95 19.1 ms · errors 0.00%")
+        champion_version = challenger_version
+        ok(f"Registry alias 'champion' moved to {champion_version}; published model.promoted")
+    else:
+        print(f"  [OK] Challenger rejected; champion remains {champion_version}. Canary skipped.")
 
     # ---- 7. reference refresh ----------------------------------------------
-    phase(7, "Drift service refreshes the reference window to the new champion")
-    refreshed = detector.handle_model_promoted(
-        {"event_type": "model.promoted", "promoted_model_version": model_version, "trace_id": trace_id}
-    )
-    ok(f"Reference window now {refreshed.get('rows', 0)} rows from {model_version}")
+    if gate_passed:
+        phase(7, "Drift service refreshes the reference window to the new champion")
+        refreshed = detector.handle_model_promoted(
+            {"event_type": "model.promoted", "promoted_model_version": champion_version, "trace_id": trace_id}
+        )
+        ok(f"Reference window now {refreshed.get('rows', 0)} rows from {champion_version}")
+    else:
+        phase(7, "Drift service keeps the reference window on the current champion")
+        ok(f"Reference window remains on {champion_version}; no model.promoted event was sent")
 
     # ---- 8. realised performance -------------------------------------------
     phase(8, "Two simulated weeks later: labels arrive and prove the alert was right")
@@ -183,17 +195,21 @@ def run_simulation(scenario: str = "price_hike", severity: float = 0.8, batch_si
               f"over {stats['batches']} batch(es)")
 
     print("\n" + RULE)
-    print("[SUCCESS] Drift detected, model retrained, gated, promoted and explained - no human in the loop.")
+    if gate_passed:
+        print("[SUCCESS] Drift detected, challenger passed the gate, was canaried and promoted.")
+    else:
+        print("[SUCCESS] Drift detected and explained; challenger was rejected and the champion was preserved.")
     print(RULE + "\n")
 
     return {
-        "status": "completed",
+        "status": "completed" if gate_passed else "completed_gate_rejected",
         "trace_id": trace_id,
         "batch": batch,
         "drift_severity": drift["severity"],
         "report_uri": drift["report_uri"],
         "challenger_auc": challenger_auc,
-        "model_version": model_version,
+        "model_version": challenger_version,
+        "champion_version": champion_version,
         "realised_performance": evidence,
     }
 
