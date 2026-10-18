@@ -122,7 +122,13 @@ def launch_retraining_pipeline(request):
 
     client = storage.Client(project=PROJECT_ID)
     bucket = client.bucket(ARTIFACTS_BUCKET)
-    aiplatform.init(project=PROJECT_ID, location=REGION, staging_bucket=PIPELINE_ROOT)
+    # The SDK's staging_bucket argument must be the bucket root; PIPELINE_ROOT
+    # is a subdirectory reserved for pipeline output artifacts.
+    aiplatform.init(
+        project=PROJECT_ID,
+        location=REGION,
+        staging_bucket=f"gs://{ARTIFACTS_BUCKET}",
+    )
     record_key = f"pipeline-runs/claims/{trace_id}.json"
     record = {"trace_id": trace_id, "batch_id": event.get("batch_id"),
               "status": "CLAIMED", "created_at": datetime.now(timezone.utc).isoformat()}

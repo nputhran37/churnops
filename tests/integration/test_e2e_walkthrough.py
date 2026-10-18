@@ -144,18 +144,27 @@ class TestChurnOpsWalkingSkeleton(unittest.TestCase):
         self.assertTrue(analyst["guardrail_passed"])
         print(f"[OK] {analyst['report']['headline']}")
 
-        # --- Step 8: promotion refreshes the reference window -----------------
-        print("\n[8] Promoting the challenger and refreshing the reference window...")
-        refreshed = detector.handle_model_promoted(
-            {
-                "event_type": "model.promoted",
-                "promoted_model_version": challenger["model_version"],
-                "trace_id": self.trace_id,
-            }
-        )
-        self.assertEqual(refreshed["status"], "refreshed")
-        self.assertEqual(ReferenceWindow.load(warehouse).model_version, challenger["model_version"])
-        print(f"[OK] Reference window now tracks {challenger['model_version']}")
+        # --- Step 8: only a passed challenger may become champion -----------
+        if challenger["status"] == "gate_passed":
+            print("\n[8] Promoting the challenger and refreshing the reference window...")
+            refreshed = detector.handle_model_promoted(
+                {
+                    "event_type": "model.promoted",
+                    "promoted_model_version": challenger["model_version"],
+                    "trace_id": self.trace_id,
+                }
+            )
+            self.assertEqual(refreshed["status"], "refreshed")
+            self.assertEqual(ReferenceWindow.load(warehouse).model_version, challenger["model_version"])
+            print(f"[OK] Reference window now tracks {challenger['model_version']}")
+        else:
+            print("\n[8] Challenger rejected; preserving the existing champion...")
+            self.assertEqual(
+                ReferenceWindow.load(warehouse).model_version,
+                "v-initial-champion",
+            )
+            self.assertEqual(challenger["status"], "gate_failed")
+            print("[OK] Reference window remains on v-initial-champion")
 
         # --- Step 9: delayed labels prove the alert was right -------------------
         print("\n[9] Releasing delayed labels and backfilling realised performance...")

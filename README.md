@@ -6,13 +6,18 @@
 ![Terraform](https://img.shields.io/badge/IaC-Terraform-844FBA?style=flat&logo=terraform)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-ChurnOps is a production-grade, event-driven MLOps and LLMOps platform on Google Cloud Platform that keeps a churn prediction model trustworthy with **zero human intervention in the loop**.
+ChurnOps is a college mini-project that demonstrates an end-to-end MLOps workflow for customer churn prediction. It generates subscriber data, detects drift, trains and evaluates a challenger model, and explains drift incidents. A local simulation is available for a repeatable live demo; selected platform components can also be deployed to Google Cloud.
 
-It observes incoming subscriber data, detects statistical drift before labels arrive, continuously retrains, executes quality gates, deploys canary traffic splits with automated rollback, and uses **Gemini on Vertex AI** as an automated "Drift Analyst" to narrate every incident in plain, executive-ready English.
+The local demo uses real project code for data generation, validation, drift analysis, model training and quality gating. Its traffic rollout is a **simulation**; it does not change live serving traffic. The cloud trigger submits a Vertex AI Pipeline, while production-grade model serving, automated canary rollout and rollback are not part of this mini-project's verified demo path.
 
 ---
 
-## 🏗️ Architecture & 3-Role Ownership
+## 🏗️ Architecture Sketch & 3-Role Ownership
+
+This diagram summarizes the project components. The local walkthrough is the
+verified college demo path; it simulates the traffic rollout. The GCP trigger
+and Vertex training pipeline can be deployed separately, while the full live
+canary and rollback flow is outside the verified demo scope.
 
 The platform connects three decoupled planes through Pub/Sub events, BigQuery tables, Cloud Storage, and Vertex AI Model Registry:
 
@@ -39,17 +44,16 @@ The platform connects three decoupled planes through Pub/Sub events, BigQuery ta
                                          ▼
 +-----------------------------------------------------------------------------------+
 | PERSON 2: ML & LLMOps PLANE                                                       |
-|   Vertex AI Pipeline: Snapshot -> Validate -> Split -> Train -> Holdout Evaluate  |
-|   Quality Gate: ROC-AUC >= Champion - 0.005 & Recall@70P -> Register Challenger   |
-|   Cloud Run: FastAPI Prediction Service (p95 latency < 300ms SLO)                |
-|   Cloud Run: Gemini Drift Analyst (Structured JSON + Numeric Guardrails + Slack)  |
+|   Vertex AI Pipeline: labelled BigQuery history -> train -> holdout evaluation   |
+|   Quality Gate: ROC-AUC and Brier thresholds -> publish trained/rejected event   |
+|   FastAPI Prediction Service (containerized inference component)                  |
+|   Drift Analyst: Gemini when configured; deterministic fallback for local demo   |
 +-----------------------------------------------------------------------------------+
                                          │  (model.trained)
                                          ▼
 +-----------------------------------------------------------------------------------+
 | PERSON 3: PROGRESSIVE DELIVERY                                                    |
-|   Cloud Build: Canary traffic split 10% -> 50% -> 100% on Cloud Run               |
-|   Auto-Rollback on SLO breach; Reassigns Vertex Registry alias 'champion'         |
+|   Demo scope: local rollout narration; no live traffic shift or auto-rollback     |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -95,26 +99,38 @@ churnops/
 
 ---
 
-## 🚀 Quickstart & Demo Simulation
+## 🚀 Quickstart & College Demo
 
-The whole loop runs locally in under a minute with **zero GCP credentials** — the
-data plane writes to local directories and a local event outbox instead of GCS,
-BigQuery and Pub/Sub, selected by environment variables, not by different code.
+The local demo runs without GCP credentials. It writes data, reports and events
+to local folders. The first run seeds a small local dataset; later runs reuse
+the local state. To reset the demo, run `make clean` and then `make seed`.
 
 ```bash
 # 1. Install dependencies
 make setup
 
-# 2. Bootstrap the data plane: fit the generator profile, load the seed and 30 days
-#    of history, freeze the reference window, materialise the training snapshot
+# 2. Bootstrap the data plane: seed data, history and a reference window
 make seed
 
-# 3. Verify the contracts and the data-plane unit tests
+# 3. Verify the contracts and unit tests (optional before the demo)
 make test-contracts
 make test-unit
 
-# 4. Run the full automated incident demo
+# 4. Run the end-to-end local incident demo
 make simulate SCENARIO=price_hike SEVERITY=0.8
+```
+
+On Windows PowerShell, create an environment and install the component
+dependencies before running the demo:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+py -m pip install --upgrade pip
+py -m pip install -r data/generator/requirements.txt -r data/ingest/requirements.txt -r data/drift/requirements.txt -r ml/pipeline/requirements.txt -r ml/serving/requirements.txt -r llm/analyst/requirements.txt
+py -m pip install pytest jsonschema ruff mypy matplotlib
+py scripts/bootstrap_seed.py
+py scripts/simulate_walking_skeleton.py --scenario price_hike --severity 0.8
 ```
 
 ### What `make simulate` does
@@ -123,11 +139,11 @@ make simulate SCENARIO=price_hike SEVERITY=0.8
 |---|---|
 | 0 | Reads the frozen reference window and the serving champion |
 | 1 | **Generator job** samples a batch from the fitted profile and injects the scenario; churn labels are withheld for 14 simulated days |
-| 2 | **Ingest job** validates with the contract-generated Pandera schema, MERGEs `raw_events` + `features_daily`, publishes `data.batch.landed` |
-| 3 | **Drift service** computes PSI/KS per numeric feature, Jensen-Shannon/chi-square per categorical, and prediction drift against the champion's score distribution; writes `report.json`, `report.html` and a `drift_reports` row; publishes `drift.detected` unless the cooldown suppresses it |
-| 4 | **Drift Analyst** (Gemini) narrates the incident |
-| 5 | **Training pipeline** snapshots the labelled history, trains and gates the challenger |
-| 6 | **Progressive delivery** shifts traffic 10% → 50% → 100% only when the challenger passes the quality gate; a rejected challenger leaves the current champion serving |
+| 2 | **Ingest code** validates the batch and writes to the local warehouse/outbox (no BigQuery or Pub/Sub in local mode) |
+| 3 | **Drift detector** computes feature drift, writes local reports and emits a local `drift.detected` event when thresholds are exceeded |
+| 4 | **Drift Analyst** produces a report; Vertex Gemini is used only when configured, otherwise the demo's fallback is used |
+| 5 | **Training code** snapshots labelled history, trains a challenger and applies the quality gate |
+| 6 | **Rollout narration** displays illustrative traffic stages only when the gate passes; it does not shift real traffic. A rejected challenger leaves the champion/reference unchanged |
 | 7 | **Drift service** refreshes the reference window after promotion; it stays on the current champion when the challenger is rejected |
 | 8 | Two simulated weeks later the labels arrive and the realised champion AUC is backfilled onto the drift report — the proof the alert predicted degradation |
 
