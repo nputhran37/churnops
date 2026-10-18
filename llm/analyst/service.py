@@ -5,6 +5,7 @@ with numeric guardrails, Slack notifications, and BigQuery call telemetry.
 """
 
 import argparse
+import base64
 import datetime
 import json
 import logging
@@ -13,6 +14,7 @@ import re
 import time
 import requests
 import yaml
+from fastapi import FastAPI, Request, Response
 try:
     from guardrails import DriftIncidentReport, generate_templated_fallback, verify_numeric_guardrail
 except ImportError:
@@ -301,6 +303,37 @@ def process_event(event_payload: dict) -> dict:
         "fallback_used": fallback_used,
         "call_record": call_record,
     }
+
+
+app = FastAPI(title="ChurnOps Drift Analyst", version="1.0.0")
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok", "service": "drift-analyst"}
+
+
+@app.post("/")
+async def handle_pubsub_push(request: Request) -> Response:
+    """Process a Pub/Sub push envelope and retry transient processing failures."""
+    try:
+        envelope = await request.json()
+        message = envelope.get("message", envelope)
+        encoded = message.get("data")
+        payload = json.loads(base64.b64decode(encoded).decode("utf-8")) if encoded else message
+        if not isinstance(payload, dict):
+            return Response(status_code=204)
+    except Exception as exc:
+        emit_log("WARNING", f"Invalid Pub/Sub push payload dropped: {exc}", "tr-unset")
+        return Response(status_code=204)
+
+    try:
+        result = process_event(payload)
+        return Response(content=json.dumps(result, default=str), media_type="application/json", status_code=200)
+    except Exception as exc:
+        trace_id = payload.get("trace_id", "tr-unknown")
+        emit_log("ERROR", f"Analyst failed to process push event: {exc}", trace_id)
+        return Response(status_code=500)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,16 @@
+substitutions:
+  _REGION: 'us-central1'
+  _REGISTRY: 'churnops-docker'
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-analyst'
+    args: ['build', '-f', 'llm/analyst/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-analyst'
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:latest']
+
+timeout: '1200s'
+options:
+  logging: CLOUD_LOGGING_ONLY

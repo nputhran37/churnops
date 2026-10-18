@@ -47,7 +47,7 @@ steps:
 
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-analyst'
-    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:latest', 'llm/analyst']
+    args: ['build', '-f', 'llm/analyst/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:latest', '.']
 
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-images'

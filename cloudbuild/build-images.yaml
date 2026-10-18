@@ -1,0 +1,41 @@
+# Build and publish the ChurnOps containers without running Terraform as the
+# Cloud Build service account. Infrastructure is applied separately by the
+# authenticated project owner.
+substitutions:
+  _REGION: 'us-central1'
+  _REGISTRY: 'churnops-docker'
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-generator'
+    args: ['build', '-f', 'data/generator/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/generator:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-ingest'
+    args: ['build', '-f', 'data/ingest/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/ingest:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-drift'
+    args: ['build', '-f', 'data/drift/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/drift:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-serving'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/serving:latest', 'ml/serving']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-analyst'
+    args: ['build', '-f', 'llm/analyst/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-images'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        for service in generator ingest drift serving analyst; do
+          docker push ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/$$service:latest
+        done
+
+timeout: '1800s'
+options:
+  logging: CLOUD_LOGGING_ONLY
