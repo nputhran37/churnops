@@ -150,7 +150,7 @@ def churn_training_pipeline(
     dataset_id: str = "churnops",
     champion_auc: float = 0.810,
 ):
-    train_and_gate(
+    training_task = train_and_gate(
         project_id=project_id,
         dataset_id=dataset_id,
         snapshot_date=snapshot_date,
@@ -158,6 +158,10 @@ def churn_training_pipeline(
         trigger_reason=trigger_reason,
         champion_auc=champion_auc,
     )
+    # The demo GCP project currently has a one-vCPU Vertex custom-training
+    # quota. The tabular sample is small enough for a single CPU and 4 GiB.
+    training_task.set_cpu_limit("1")
+    training_task.set_memory_limit("4Gi")
 
 
 if __name__ == "__main__":

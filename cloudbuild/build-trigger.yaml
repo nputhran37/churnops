@@ -1,0 +1,22 @@
+substitutions:
+  _REGION: us-central1
+  _REGISTRY: churnops-docker
+  _TAG: gcpdemo-fix
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build-trigger
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/trigger:${_TAG}
+      - ops/trigger_fn
+  - name: gcr.io/cloud-builders/docker
+    id: push-trigger
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/trigger:${_TAG}
+
+timeout: 1200s
+options:
+  logging: CLOUD_LOGGING_ONLY

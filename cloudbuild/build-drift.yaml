@@ -1,0 +1,24 @@
+substitutions:
+  _REGION: us-central1
+  _REGISTRY: churnops-docker
+  _TAG: gcpdemo-fix
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build-drift
+    args:
+      - build
+      - -f
+      - data/drift/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/drift:${_TAG}
+      - .
+  - name: gcr.io/cloud-builders/docker
+    id: push-drift
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/drift:${_TAG}
+
+timeout: 1200s
+options:
+  logging: CLOUD_LOGGING_ONLY

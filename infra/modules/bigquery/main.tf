@@ -44,6 +44,21 @@ resource "google_bigquery_table" "features_daily" {
   schema     = file("${path.module}/../../../contracts/bq/features_daily.json")
 }
 
+# Delayed churn labels are stored separately so the model pipeline can replay
+# realistic label availability without exposing labels on landing batches.
+resource "google_bigquery_table" "labels" {
+  dataset_id = google_bigquery_dataset.churnops.dataset_id
+  table_id   = "labels"
+  project    = var.project_id
+
+  time_partitioning {
+    type  = "DAY"
+    field = "batch_date"
+  }
+
+  schema = file("${path.module}/../../../contracts/bq/labels.json")
+}
+
 # 3. reference_window table
 resource "google_bigquery_table" "reference_window" {
   dataset_id = google_bigquery_dataset.churnops.dataset_id

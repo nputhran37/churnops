@@ -106,9 +106,20 @@ class Warehouse:
         keys = MERGE_KEYS.get(table, ["batch_id"])
         on_clause = " AND ".join(f"target.{k} = source.{k}" for k in keys)
         columns = list(df.columns)
-        update = ", ".join(f"target.{c} = source.{c}" for c in columns if c not in keys)
+        # DataFrame loads infer Python strings as BigQuery STRING, even when the
+        # destination contract declares a DATE (notably batch_date). Cast values
+        # using the destination schema so the staging table can be safely merged.
+        target_fields = {field.name: field.field_type.upper() for field in client.get_table(self.table_ref(table)).schema}
+
+        def source_value(column: str) -> str:
+            field_type = target_fields.get(column)
+            if field_type in {"DATE", "DATETIME", "TIME", "TIMESTAMP"}:
+                return f"SAFE_CAST(source.{column} AS {field_type})"
+            return f"source.{column}"
+
+        update = ", ".join(f"target.{c} = {source_value(c)}" for c in columns if c not in keys)
         insert_cols = ", ".join(columns)
-        insert_vals = ", ".join(f"source.{c}" for c in columns)
+        insert_vals = ", ".join(source_value(c) for c in columns)
         sql = (
             f"MERGE `{self.table_ref(table)}` AS target USING `{staging}` AS source ON {on_clause} "
             f"WHEN MATCHED THEN UPDATE SET {update} "

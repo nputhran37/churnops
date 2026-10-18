@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 from common.contracts import FeatureContract, load_feature_contract
 from common.logging_utils import get_logger
+from common.storage import Storage, read_tabular, use_gcs
 from common.warehouse import Warehouse
 
 REFERENCE_SAMPLE_FILENAME = "reference_sample.parquet"
@@ -49,6 +50,10 @@ class ReferenceWindow:
     # ------------------------------------------------------------------
     @staticmethod
     def sample_path_for(warehouse: Warehouse) -> str:
+        if use_gcs():
+            return Storage.for_role("artifacts").uri(
+                f"reference_window/{REFERENCE_SAMPLE_FILENAME}"
+            )
         return os.path.join(warehouse.root, "reference_window", REFERENCE_SAMPLE_FILENAME)
 
     @classmethod
@@ -68,8 +73,13 @@ class ReferenceWindow:
 
         sample = frame if len(frame) <= MAX_SAMPLE_ROWS else frame.sample(MAX_SAMPLE_ROWS, random_state=7)
         sample_path = cls.sample_path_for(warehouse)
-        os.makedirs(os.path.dirname(sample_path), exist_ok=True)
-        sample.to_parquet(sample_path, index=False)
+        if sample_path.startswith("gs://"):
+            Storage.for_role("artifacts").write_parquet(
+                f"reference_window/{REFERENCE_SAMPLE_FILENAME}", sample
+            )
+        else:
+            os.makedirs(os.path.dirname(sample_path), exist_ok=True)
+            sample.to_parquet(sample_path, index=False)
 
         rows = summarise_features(sample, model_version, snapshot_date, contract)
         warehouse.replace_table("reference_window", rows)
@@ -91,14 +101,19 @@ class ReferenceWindow:
         """Load the frozen reference window, or None when the platform is cold."""
         warehouse = warehouse or Warehouse.default()
         path = sample_path or cls.sample_path_for(warehouse)
-        if not os.path.exists(path):
+        if path.startswith("gs://"):
+            if not Storage.for_role("artifacts").exists(
+                f"reference_window/{REFERENCE_SAMPLE_FILENAME}"
+            ):
+                return None
+        elif not os.path.exists(path):
             return None
 
         rows = warehouse.read_rows("reference_window")
         model_version = rows[0]["model_version"] if rows else "unknown"
         snapshot_date = rows[0]["snapshot_date"] if rows else datetime.date.today().isoformat()
         return cls(
-            frame=pd.read_parquet(path),
+            frame=read_tabular(path),
             model_version=str(model_version),
             snapshot_date=str(snapshot_date),
             sample_path=path,

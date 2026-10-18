@@ -102,6 +102,104 @@ resource "google_service_account_iam_member" "pubsub_push_token_creator" {
   member             = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
 
+resource "google_service_account_iam_member" "pubsub_drift_token_creator" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${module.iam.service_accounts["drift"]}"
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+}
+
+resource "google_service_account_iam_member" "pubsub_analyst_token_creator" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${module.iam.service_accounts["analyst"]}"
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+}
+
+# The dispatcher submits Vertex Pipeline jobs using sa-pipeline as the runtime
+# identity, so the Cloud Run trigger identity must be allowed to act as it.
+resource "google_service_account_iam_member" "trigger_act_as_pipeline" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${module.iam.service_accounts["pipeline"]}"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${module.iam.service_accounts["trigger"]}"
+}
+
+resource "google_storage_bucket_iam_member" "trigger_bucket_reader" {
+  bucket = module.storage.artifacts_bucket
+  role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${module.iam.service_accounts["trigger"]}"
+}
+
+# Deliver validated batch events to the GCP drift detector.
+resource "google_pubsub_subscription" "data_batch_landed_drift" {
+  name    = "data-batch-landed-drift"
+  topic   = module.pubsub.topic_ids["data-batch-landed"]
+  project = var.project_id
+
+  ack_deadline_seconds = 60
+  push_config {
+    push_endpoint = module.cloud_run.drift_url
+    oidc_token {
+      service_account_email = module.iam.service_accounts["drift"]
+      audience              = module.cloud_run.drift_url
+    }
+  }
+  dead_letter_policy {
+    dead_letter_topic     = "projects/${var.project_id}/topics/churnops-dead-letter"
+    max_delivery_attempts = 5
+  }
+  depends_on = [
+    google_service_account_iam_member.pubsub_drift_token_creator,
+    module.cloud_run,
+  ]
+}
+
+# Keep the reference window in sync with a model promotion event.
+resource "google_pubsub_subscription" "model_promoted_drift" {
+  name    = "model-promoted-drift"
+  topic   = module.pubsub.topic_ids["model-promoted"]
+  project = var.project_id
+
+  ack_deadline_seconds = 60
+  push_config {
+    push_endpoint = module.cloud_run.drift_url
+    oidc_token {
+      service_account_email = module.iam.service_accounts["drift"]
+      audience              = module.cloud_run.drift_url
+    }
+  }
+  dead_letter_policy {
+    dead_letter_topic     = "projects/${var.project_id}/topics/churnops-dead-letter"
+    max_delivery_attempts = 5
+  }
+  depends_on = [
+    google_service_account_iam_member.pubsub_drift_token_creator,
+    module.cloud_run,
+  ]
+}
+
+# The cloud analyst receives the same validated drift event as the Vertex trigger.
+resource "google_pubsub_subscription" "drift_detected_analyst" {
+  name    = "drift-detected-analyst"
+  topic   = module.pubsub.topic_ids["drift-detected"]
+  project = var.project_id
+
+  ack_deadline_seconds = 60
+  push_config {
+    push_endpoint = module.cloud_run.analyst_url
+    oidc_token {
+      service_account_email = module.iam.service_accounts["analyst"]
+      audience              = module.cloud_run.analyst_url
+    }
+  }
+  dead_letter_policy {
+    dead_letter_topic     = "projects/${var.project_id}/topics/churnops-dead-letter"
+    max_delivery_attempts = 5
+  }
+  depends_on = [
+    google_service_account_iam_member.pubsub_analyst_token_creator,
+    module.cloud_run,
+  ]
+}
+
 resource "google_pubsub_subscription" "training_trigger" {
   name    = "drift-detected-trigger"
   topic   = module.pubsub.topic_ids["drift-detected"]

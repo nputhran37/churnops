@@ -67,8 +67,69 @@ resource "google_cloud_run_v2_service" "analyst" {
       resources {
         limits = {
           cpu    = "1000m"
+          memory = "1Gi"
+        }
+      }
+      env {
+        name  = "GEMINI_MODE"
+        value = "vertex"
+      }
+      env {
+        name  = "GOOGLE_CLOUD_PROJECT"
+        value = var.project_id
+      }
+      env {
+        name  = "GOOGLE_CLOUD_LOCATION"
+        value = "global"
+      }
+      env {
+        name  = "GEMINI_MODEL"
+        value = "gemini-2.5-flash"
+      }
+    }
+  }
+}
+
+# Cloud Run Drift Detector. Pub/Sub push subscriptions call this service after
+# ingest lands a validated batch and after a model is promoted.
+resource "google_cloud_run_v2_service" "drift" {
+  name     = "churnops-drift"
+  location = var.region
+  project  = var.project_id
+
+  template {
+    service_account = var.service_account_emails["drift"]
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 3
+    }
+    containers {
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/churnops-docker/drift:${var.image_tag}"
+      resources {
+        limits = {
+          cpu    = "1000m"
           memory = "512Mi"
         }
+      }
+      env {
+        name  = "CHURNOPS_PROJECT_ID"
+        value = var.project_id
+      }
+      env {
+        name  = "CHURNOPS_BQ_DATASET"
+        value = "churnops"
+      }
+      env {
+        name  = "CHURNOPS_USE_GCS"
+        value = "1"
+      }
+      env {
+        name  = "CHURNOPS_USE_BQ"
+        value = "1"
+      }
+      env {
+        name  = "CHURNOPS_USE_PUBSUB"
+        value = "1"
       }
     }
   }
@@ -91,7 +152,7 @@ resource "google_cloud_run_v2_service" "trigger" {
       resources {
         limits = {
           cpu    = "1000m"
-          memory = "512Mi"
+          memory = "1Gi"
         }
       }
       env {
@@ -126,6 +187,22 @@ resource "google_cloud_run_v2_service_iam_member" "trigger_invoker" {
   member   = "serviceAccount:${var.service_account_emails["trigger"]}"
 }
 
+resource "google_cloud_run_v2_service_iam_member" "drift_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.drift.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${var.service_account_emails["drift"]}"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "analyst_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.analyst.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${var.service_account_emails["analyst"]}"
+}
+
 output "serving_url" {
   value = google_cloud_run_v2_service.serving.uri
 }
@@ -136,4 +213,8 @@ output "analyst_url" {
 
 output "trigger_url" {
   value = google_cloud_run_v2_service.trigger.uri
+}
+
+output "drift_url" {
+  value = google_cloud_run_v2_service.drift.uri
 }

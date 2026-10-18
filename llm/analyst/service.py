@@ -83,8 +83,40 @@ def build_context(event_payload: dict) -> str:
 
 def call_gemini_or_mock(prompt_cfg: dict, context_str: str) -> dict:
     """
-    Invokes Vertex AI Gemini or deterministic reasoning mock when API key/auth is not present.
+    Uses Vertex AI Gemini with Cloud Run's service-account identity when configured,
+    the Gemini Developer API when an API key is provided, or a deterministic local
+    fallback for offline demos and tests.
     """
+    if os.getenv("GEMINI_MODE", "").lower() == "vertex":
+        try:
+            from google import genai
+            from google.genai.types import GenerateContentConfig
+
+            client = genai.Client(
+                vertexai=True,
+                project=os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("CHURNOPS_PROJECT_ID"),
+                location=os.getenv("GOOGLE_CLOUD_LOCATION", "global"),
+            )
+            prompt = (
+                "Analyze this ChurnOps incident. Return JSON only, matching this schema: "
+                f"{json.dumps(DriftIncidentReport.model_json_schema())}\n\n"
+                f"Incident context:\n{context_str}"
+            )
+            response = client.models.generate_content(
+                model=os.getenv("GEMINI_MODEL", prompt_cfg.get("model", "gemini-2.5-flash")),
+                contents=prompt,
+                config=GenerateContentConfig(
+                    system_instruction=prompt_cfg.get("system_instruction"),
+                    temperature=prompt_cfg.get("temperature", 0.2),
+                    max_output_tokens=prompt_cfg.get("max_output_tokens", 1024),
+                    response_mime_type="application/json",
+                ),
+            )
+            emit_log("INFO", "Vertex AI Gemini generated the incident analysis.", "tr-llm", provider="vertex-ai")
+            return json.loads(response.text)
+        except Exception as e:
+            emit_log("WARNING", f"Vertex AI Gemini invocation failed: {e}. Falling back to the deterministic engine.", "tr-llm")
+
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
     if api_key:

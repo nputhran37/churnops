@@ -34,6 +34,10 @@ output "trigger_url" {
   value = module.cloud_run.trigger_url
 }
 
+output "drift_url" {
+  value = module.cloud_run.drift_url
+}
+
 output "monitoring_dashboard_ids" {
   value = module.monitoring.dashboard_ids
 }

@@ -1,0 +1,4 @@
+#!include:.gitignore
+
+# Terraform plans can contain sensitive resource values; keep them out of uploads.
+*.tfplan

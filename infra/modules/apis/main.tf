@@ -16,7 +16,8 @@ locals {
     "artifactregistry.googleapis.com",
     "monitoring.googleapis.com",
     "logging.googleapis.com",
-    "cloudtrace.googleapis.com"
+    "cloudtrace.googleapis.com",
+    "cloudquotas.googleapis.com"
   ]
 }
 

@@ -9,10 +9,12 @@ the buckets described in contracts/storage.md. Callers never branch on environme
 from __future__ import annotations
 
 import json
+import io
 import os
 import shutil
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 import pandas as pd
 
@@ -118,8 +120,25 @@ class Storage:
 
 def read_tabular(path: str) -> pd.DataFrame:
     """Read a parquet/csv batch from a local path or a gs:// URI."""
+    def normalize_date_extensions(frame: pd.DataFrame) -> pd.DataFrame:
+        # BigQuery DataFrames serialize DATE columns using db-dtypes' `dbdate`
+        # extension type. Convert that extension to ISO date strings before
+        # downstream NumPy/SciPy drift calculations inspect the frame.
+        for column in frame.columns:
+            if str(frame[column].dtype).lower() == "dbdate":
+                frame[column] = frame[column].astype(str)
+        return frame
+
     if path.startswith("gs://"):  # pragma: no cover - requires GCP
-        return pd.read_parquet(path) if path.endswith(".parquet") else pd.read_csv(path)
+        parsed = urlparse(path)
+        if parsed.scheme != "gs" or not parsed.netloc or not parsed.path:
+            raise ValueError(f"Invalid GCS object URI: {path}")
+        payload = Storage.for_role("artifacts")._client().bucket(parsed.netloc).blob(
+            parsed.path.lstrip("/")
+        ).download_as_bytes()
+        stream = io.BytesIO(payload)
+        frame = pd.read_parquet(stream) if path.endswith(".parquet") else pd.read_csv(stream)
+        return normalize_date_extensions(frame)
     if path.endswith(".parquet"):
-        return pd.read_parquet(path)
-    return pd.read_csv(path)
+        return normalize_date_extensions(pd.read_parquet(path))
+    return normalize_date_extensions(pd.read_csv(path))

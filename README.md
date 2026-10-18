@@ -133,6 +133,48 @@ py scripts/bootstrap_seed.py
 py scripts/simulate_walking_skeleton.py --scenario price_hike --severity 0.8
 ```
 
+### GCP-backed demo
+
+For the cloud presentation, deploy the current source with Cloud Build, log in
+with Application Default Credentials, then run `scripts/demo_gcp.py`. This path
+stores the baseline and incoming batch in GCS/BigQuery and publishes real
+Pub/Sub events. Pub/Sub invokes the Cloud Run drift detector; a critical event
+fans out to the Cloud Run Vertex Gemini analyst and the existing Vertex AI
+pipeline trigger. The Vertex pipeline trains from labelled BigQuery rows and
+publishes its quality-gate result. The serving endpoint can be demonstrated
+separately; automated live canary traffic promotion is not part of this demo.
+
+```powershell
+# From the repository root; rebuild and publish all six containers.
+gcloud builds submit --project=churnops-512010 --region=us-central1 `
+  --config=cloudbuild/build-images.yaml `
+  --substitutions=_TAG=gcpdemo .
+
+# Deploy the published image tag with the authenticated local Terraform CLI.
+Set-Location infra/envs/dev
+terraform init -backend-config="bucket=churnops-512010-tfstate" -backend-config="prefix=terraform/state"
+terraform apply -var="project_id=churnops-512010" -var="image_tag=gcpdemo"
+Set-Location ../..
+
+# Authenticate the local demo driver to the same project.
+gcloud config set project churnops-512010
+gcloud auth application-default login
+.\.venv\Scripts\Activate.ps1
+python scripts/demo_gcp.py --scenario price_hike --severity 0.8
+```
+
+The cloud driver seeds a small baseline in GCS and BigQuery if no shared
+reference sample exists. It then emits one batch to the real Pub/Sub chain.
+Cloud Run logs and the Vertex AI Pipelines page show the asynchronous stages.
+This starts a Vertex training run and Vertex Gemini inference, which consume
+project resources. The pipeline may be suppressed by the configured four-hour
+drift cooldown if another critical incident has already run recently. The
+training component is configured for 1 CPU and 4 GiB, but this GCP project has a
+Vertex AI custom-training CPU quota of 1 in `us-central1`; Vertex still rejected
+the training task against that limit. Request 4 CPUs under **Vertex AI API →
+Custom model training CPUs for N1/E2 machine types → us-central1** to complete
+the cloud retraining stage. Quota approval is controlled by Google Cloud.
+
 ### What `make simulate` does
 
 | Phase | What actually runs |

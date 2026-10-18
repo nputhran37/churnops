@@ -31,15 +31,16 @@ locals {
   dataset_editors = ["generator", "ingest", "drift", "pipeline", "analyst"]
 
   storage_grants = {
-    "generator-landing" = { component = "generator", bucket = "landing", role = "roles/storage.objectAdmin" }
-    "ingest-landing"    = { component = "ingest", bucket = "landing", role = "roles/storage.objectViewer" }
-    "ingest-quarantine" = { component = "ingest", bucket = "quarantine", role = "roles/storage.objectAdmin" }
-    "drift-landing"     = { component = "drift", bucket = "landing", role = "roles/storage.objectViewer" }
-    "drift-reports"     = { component = "drift", bucket = "reports", role = "roles/storage.objectAdmin" }
+    "generator-landing"  = { component = "generator", bucket = "landing", role = "roles/storage.objectAdmin" }
+    "ingest-landing"     = { component = "ingest", bucket = "landing", role = "roles/storage.objectViewer" }
+    "ingest-quarantine"  = { component = "ingest", bucket = "quarantine", role = "roles/storage.objectAdmin" }
+    "drift-landing"      = { component = "drift", bucket = "landing", role = "roles/storage.objectViewer" }
+    "drift-artifacts"    = { component = "drift", bucket = "artifacts", role = "roles/storage.objectViewer" }
+    "drift-reports"      = { component = "drift", bucket = "reports", role = "roles/storage.objectAdmin" }
     "pipeline-artifacts" = { component = "pipeline", bucket = "artifacts", role = "roles/storage.objectAdmin" }
-    "serving-artifacts" = { component = "serving", bucket = "artifacts", role = "roles/storage.objectViewer" }
-    "analyst-reports"   = { component = "analyst", bucket = "reports", role = "roles/storage.objectViewer" }
-    "trigger-artifacts" = { component = "trigger", bucket = "artifacts", role = "roles/storage.objectAdmin" }
+    "serving-artifacts"  = { component = "serving", bucket = "artifacts", role = "roles/storage.objectViewer" }
+    "analyst-reports"    = { component = "analyst", bucket = "reports", role = "roles/storage.objectViewer" }
+    "trigger-artifacts"  = { component = "trigger", bucket = "artifacts", role = "roles/storage.objectAdmin" }
   }
 
   topic_grants = {

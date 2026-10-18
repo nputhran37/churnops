@@ -111,7 +111,13 @@ def launch_retraining_pipeline(request):
     if request.method == "GET":
         return {"status": "ok", "service": "churnops-trigger"}, 200
     envelope = request.get_json(silent=True) or {}
-    event = _payload(envelope)
+    try:
+        event = _payload(envelope)
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        # Invalid or legacy messages cannot succeed on retry. Ack them so they
+        # do not block later valid drift incidents on the push subscription.
+        logger.warning("Dropping malformed Pub/Sub event: %s", exc)
+        return {"status": "ignored", "reason": "malformed_pubsub_event"}, 200
     if event.get("event_type") != "drift.detected":
         return {"status": "ignored", "reason": "unsupported_event_type"}
     trace_id = str(event.get("trace_id", "")).strip()
