@@ -1,7 +1,9 @@
 .PHONY: help setup seed eda inject-drift ingest detect-drift realised-performance refresh-reference simulate \
-        test test-unit test-contracts test-e2e test-llm lint terraform-init terraform-plan clean
+        test test-unit test-contracts test-e2e test-llm lint terraform-bootstrap terraform-init terraform-plan clean
 
 PYTHON ?= python
+PROJECT_ID ?= churnops-512010
+REGION ?= us-central1
 SCENARIO ?= price_hike
 SEVERITY ?= 0.8
 DATE ?=
@@ -30,6 +32,7 @@ help:
 	@echo "  make test-llm             - LLMOps prompt evaluation suite"
 	@echo "  make test-e2e             - End-to-end walking skeleton"
 	@echo "  make lint                 - ruff + mypy"
+	@echo "  make terraform-bootstrap  - Create versioned remote Terraform state bucket (one-time)"
 	@echo "  make terraform-init/plan  - Terraform dev environment"
 	@echo "  make clean                - Remove local batches, warehouse, reports and caches"
 	@echo "======================================================================="
@@ -92,12 +95,15 @@ lint:
 	ruff check .
 	mypy --ignore-missing-imports data/ ml/ llm/ ops/
 
+terraform-bootstrap:
+	gcloud storage buckets create gs://$(PROJECT_ID)-tfstate --project=$(PROJECT_ID) --location=$(REGION) --uniform-bucket-level-access --public-access-prevention --soft-delete-duration=0s
+	gcloud storage buckets update gs://$(PROJECT_ID)-tfstate --versioning
+
 terraform-init:
-	cd infra/envs/dev && terraform init
+	cd infra/envs/dev && terraform init -migrate-state -force-copy -backend-config="bucket=$(PROJECT_ID)-tfstate" -backend-config="prefix=terraform/state"
 
-terraform-plan:
-	cd infra/envs/dev && terraform plan
-
+terraform-plan: terraform-init
+	cd infra/envs/dev && terraform plan -var="project_id=$(PROJECT_ID)"
 clean:
 	rm -rf data/landing data/quarantine data/warehouse data/events_outbox data/predictions_log data/llm_calls \
 		reports/ artifacts/models/v-* .pytest_cache

@@ -1,5 +1,6 @@
 terraform {
   required_version = ">= 1.5.0"
+  backend "gcs" {}
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -52,11 +53,12 @@ module "artifact_registry" {
 
 # 6. Cloud Run Services & IAM
 module "cloud_run" {
-  source     = "../../modules/cloud_run_service"
-  project_id = var.project_id
-  region     = var.region
-  image_tag  = var.image_tag
-  depends_on = [module.apis, module.artifact_registry]
+  source                = "../../modules/cloud_run_service"
+  project_id            = var.project_id
+  region                = var.region
+  image_tag             = var.image_tag
+  service_account_emails = module.iam.service_accounts
+  depends_on            = [module.apis, module.artifact_registry, module.iam]
 }
 
 # 7. Secrets
@@ -72,4 +74,19 @@ module "monitoring" {
   project_id            = var.project_id
   notification_channels = var.notification_channels
   depends_on            = [module.apis, module.cloud_run, module.pubsub]
+}
+# 9. Component identities and resource-scoped permissions
+module "iam" {
+  source     = "../../modules/iam"
+  project_id = var.project_id
+  dataset_id = module.bigquery.dataset_id
+  bucket_names = {
+    landing    = module.storage.landing_bucket
+    quarantine = module.storage.quarantine_bucket
+    artifacts  = module.storage.artifacts_bucket
+    reports    = module.storage.reports_bucket
+  }
+  topic_ids       = module.pubsub.topic_ids
+  slack_secret_id = module.secrets.slack_secret_id
+  depends_on      = [module.apis]
 }

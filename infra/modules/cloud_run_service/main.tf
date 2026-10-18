@@ -12,25 +12,9 @@ variable "image_tag" {
   default = "latest"
 }
 
-# 1. Service Account for Serving
-resource "google_service_account" "sa_serving" {
-  account_id   = "sa-serving"
-  display_name = "ChurnOps Serving Service Account"
-  project      = var.project_id
-}
-
-# 2. Service Account for Drift Analyst
-resource "google_service_account" "sa_analyst" {
-  account_id   = "sa-analyst"
-  display_name = "ChurnOps Drift Analyst Service Account"
-  project      = var.project_id
-}
-
-# IAM: Vertex AI User for Gemini
-resource "google_project_iam_member" "analyst_vertex_ai" {
-  project = var.project_id
-  role    = "roles/aiplatform.user"
-  member  = "serviceAccount:${google_service_account.sa_analyst.email}"
+variable "service_account_emails" {
+  description = "Service account emails keyed by component name."
+  type        = map(string)
 }
 
 # Cloud Run Serving Service
@@ -40,7 +24,7 @@ resource "google_cloud_run_v2_service" "serving" {
   project  = var.project_id
 
   template {
-    service_account = google_service_account.sa_serving.email
+    service_account = var.service_account_emails["serving"]
     scaling {
       min_instance_count = 0
       max_instance_count = 10
@@ -73,7 +57,7 @@ resource "google_cloud_run_v2_service" "analyst" {
   project  = var.project_id
 
   template {
-    service_account = google_service_account.sa_analyst.email
+    service_account = var.service_account_emails["analyst"]
     scaling {
       min_instance_count = 0
       max_instance_count = 3

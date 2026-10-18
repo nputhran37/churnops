@@ -4,11 +4,11 @@ variable "project_id" {
 
 locals {
   topics = [
-    "data.batch.landed",
-    "drift.detected",
-    "model.trained",
-    "model.promoted",
-    "model.rejected"
+    "data-batch-landed",
+    "drift-detected",
+    "model-trained",
+    "model-promoted",
+    "model-rejected"
   ]
 }
 

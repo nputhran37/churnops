@@ -1,75 +1,64 @@
-# ChurnOps Continuous Delivery (CD) Pipeline
-# Triggered on merge to main branch
+# Cloud Build CD: bootstrap state, provision the registry, build images, then deploy.
 substitutions:
   _REGION: 'us-central1'
   _REGISTRY: 'churnops-docker'
 
 steps:
-  # 1. Build and push container images to Artifact Registry tagged with COMMIT_SHA
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-push-generator'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'bootstrap-terraform-state'
+    entrypoint: 'bash'
     args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/generator:${COMMIT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/generator:latest'
-      - 'data/generator'
+      - '-c'
+      - |
+        gcloud services enable storage.googleapis.com --project=${PROJECT_ID}
+        if ! gcloud storage buckets describe gs://${PROJECT_ID}-tfstate --project=${PROJECT_ID} >/dev/null 2>&1; then
+          gcloud storage buckets create gs://${PROJECT_ID}-tfstate \
+            --project=${PROJECT_ID} --location=${_REGION} \
+            --uniform-bucket-level-access --public-access-prevention \
+            --soft-delete-duration=0s
+        fi
+        gcloud storage buckets update gs://${PROJECT_ID}-tfstate --versioning --project=${PROJECT_ID}
 
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-push-ingest'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/ingest:${COMMIT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/ingest:latest'
-      - 'data/ingest'
-
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-push-drift'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/drift:${COMMIT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/drift:latest'
-      - 'data/drift'
-
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-push-serving'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/serving:${COMMIT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/serving:latest'
-      - 'ml/serving'
-
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-push-analyst'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:${COMMIT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:latest'
-      - 'llm/analyst'
-
-  # 2. Push all images to Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-images'
+  - name: 'hashicorp/terraform:1.15.8'
+    id: 'provision-apis-and-registry'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
-        docker push --all-tags ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/generator
-        docker push --all-tags ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/ingest
-        docker push --all-tags ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/drift
-        docker push --all-tags ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/serving
-        docker push --all-tags ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst
+        cd infra/envs/dev
+        terraform init -migrate-state -force-copy -backend-config="bucket=${PROJECT_ID}-tfstate" -backend-config="prefix=terraform/state"
+        terraform apply -auto-approve -target=module.apis -target=module.artifact_registry -var="project_id=${PROJECT_ID}"
 
-  # 3. Apply Terraform Infrastructure
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-generator'
+    args: ['build', '-f', 'data/generator/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/generator:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/generator:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-ingest'
+    args: ['build', '-f', 'data/ingest/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/ingest:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/ingest:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-drift'
+    args: ['build', '-f', 'data/drift/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/drift:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/drift:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-serving'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/serving:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/serving:latest', 'ml/serving']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-analyst'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:latest', 'llm/analyst']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-images'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        for service in generator ingest drift serving analyst; do
+          docker push --all-tags ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/$$service
+        done
+
   - name: 'hashicorp/terraform:1.15.8'
     id: 'terraform-apply-dev'
     entrypoint: 'sh'
@@ -77,12 +66,11 @@ steps:
       - '-c'
       - |
         cd infra/envs/dev
-        terraform init
+        terraform init -migrate-state -force-copy -backend-config="bucket=${PROJECT_ID}-tfstate" -backend-config="prefix=terraform/state"
         terraform apply -auto-approve -var="project_id=${PROJECT_ID}" -var="image_tag=${COMMIT_SHA}"
 
-  # 4. Compile and Upload KFP Retraining Pipeline Spec
   - name: 'python:3.11-slim'
-    id: 'compile-kfp-pipeline'
+    id: 'compile-and-upload-kfp-pipeline'
     entrypoint: 'bash'
     args:
       - '-c'
@@ -92,17 +80,16 @@ steps:
         gsutil cp ml/pipeline/churn_pipeline.yaml gs://${PROJECT_ID}-artifacts/pipelines/churn_retraining_${COMMIT_SHA}.yaml
         gsutil cp ml/pipeline/churn_pipeline.yaml gs://${PROJECT_ID}-artifacts/pipelines/churn_retraining_latest.yaml
 
-  # 5. Post-Deploy Health and Smoke Checks
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'smoke-tests'
+    id: 'smoke-test-serving'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        SERVING_URL=$$(gcloud run services describe churnops-serving --platform managed --region ${_REGION} --format 'value(status.url)')
-        echo "Testing Serving Health at $$SERVING_URL/health"
-        curl -f "$$SERVING_URL/health"
-        curl -f "$$SERVING_URL/version"
+        SERVING_URL=$$(gcloud run services describe churnops-serving --region ${_REGION} --format='value(status.url)')
+        TOKEN=$$(gcloud auth print-identity-token --audiences=$$SERVING_URL)
+        curl -fsS -H "Authorization: Bearer $$TOKEN" "$$SERVING_URL/health"
+        curl -fsS -H "Authorization: Bearer $$TOKEN" "$$SERVING_URL/version"
 
 timeout: '1800s'
 options:

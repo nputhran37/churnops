@@ -16,7 +16,7 @@ logger = logging.getLogger("trigger-fn")
 PROJECT_ID = os.getenv("PROJECT_ID", "local-dev-project")
 REGION = os.getenv("REGION", "us-central1")
 PIPELINE_ROOT = os.getenv("PIPELINE_ROOT", f"gs://{PROJECT_ID}-artifacts/pipelines")
-PIPELINE_SPEC_URI = os.getenv("PIPELINE_SPEC_URI", f"{PIPELINE_ROOT}/churn_training_pipeline.yaml")
+PIPELINE_SPEC_URI = os.getenv("PIPELINE_SPEC_URI", f"{PIPELINE_ROOT}/churn_retraining_latest.yaml")
 
 # In-memory execution cache for local and test execution
 ACTIVE_PIPELINE_RUNS = {}

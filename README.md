@@ -198,3 +198,7 @@ what to do when a batch is quarantined.
 ### Platform monitoring setup (Person 3)
 
 Terraform creates the Cloud Monitoring dashboards and baseline alerts from `ops/dashboards/`. To receive alert notifications, create a notification channel in Cloud Monitoring and pass its full resource name through `notification_channels` in `infra/envs/dev/terraform.tfvars` (for example, `projects/<project-id>/notificationChannels/<channel-id>`). The example defaults to an empty list, so incidents remain visible in Monitoring but are not sent to an email or messaging destination until a channel is configured.
+
+### Terraform state bootstrap
+
+The first deployment creates a versioned GCS bucket for remote Terraform state. Run `make terraform-bootstrap` once from a shell with `gcloud` authenticated and permission to create buckets in the project. Cloud Build performs the same check on deploy. Then `make terraform-plan` uses the remote state backend. The state bucket is `gs://<project-id>-tfstate` and is intentionally separate from the application data buckets.

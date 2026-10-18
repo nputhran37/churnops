@@ -78,7 +78,7 @@ steps:
         from google.cloud import pubsub_v1
 
         publisher = pubsub_v1.PublisherClient()
-        topic_path = publisher.topic_path(os.getenv("PROJECT_ID"), "model.promoted")
+        topic_path = publisher.topic_path(os.getenv("PROJECT_ID"), "model-promoted")
         
         payload = {
             "event_type": "model.promoted",

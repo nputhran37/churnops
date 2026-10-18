@@ -37,3 +37,8 @@ output "monitoring_dashboard_ids" {
 output "monitoring_alert_policy_ids" {
   value = module.monitoring.alert_policy_ids
 }
+
+output "service_account_emails" {
+  description = "Dedicated runtime service accounts keyed by component."
+  value       = module.iam.service_accounts
+}
