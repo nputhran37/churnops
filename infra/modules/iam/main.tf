@@ -39,7 +39,7 @@ locals {
     "pipeline-artifacts" = { component = "pipeline", bucket = "artifacts", role = "roles/storage.objectAdmin" }
     "serving-artifacts" = { component = "serving", bucket = "artifacts", role = "roles/storage.objectViewer" }
     "analyst-reports"   = { component = "analyst", bucket = "reports", role = "roles/storage.objectViewer" }
-    "trigger-artifacts" = { component = "trigger", bucket = "artifacts", role = "roles/storage.objectViewer" }
+    "trigger-artifacts" = { component = "trigger", bucket = "artifacts", role = "roles/storage.objectAdmin" }
   }
 
   topic_grants = {
@@ -50,6 +50,7 @@ locals {
     "cicd-promoted"       = { component = "cicd", topic = "model-promoted" }
     "cicd-rejected"       = { component = "cicd", topic = "model-rejected" }
   }
+
 }
 
 resource "google_service_account" "component" {

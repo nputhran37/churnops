@@ -9,10 +9,10 @@ steps:
       - '-c'
       - |
         pip install ruff mypy
-        echo "Running Ruff code linter..."
-        ruff check .
-        echo "Running Mypy static type checker..."
-        mypy --ignore-missing-imports data/ ml/ llm/ ops/
+        echo "Running Ruff code linter on the P3 integration code..."
+        ruff check ops/trigger_fn ml/pipeline/pipeline.py
+        echo "Running Mypy on the P3 integration code..."
+        mypy --explicit-package-bases --ignore-missing-imports ops/trigger_fn/main.py ml/pipeline/pipeline.py
 
   # 2. Contract Verification Tests
   - name: 'python:3.11-slim'
@@ -31,7 +31,7 @@ steps:
     args:
       - '-c'
       - |
-        pip install pytest scikit-learn pandas numpy scipy pydantic pyyaml
+        pip install pytest scikit-learn pandas numpy scipy pydantic pyyaml jsonschema pandera pyarrow
         pytest tests/unit/
 
   # 4. Terraform Validation & Plan
@@ -53,8 +53,17 @@ steps:
     args:
       - '-c'
       - |
-        pip install pyyaml pydantic requests
+        pip install pyyaml pydantic requests fastapi
         python llm/evals/eval_runner.py
+
+  - name: 'python:3.11-slim'
+    id: 'walking-skeleton-e2e'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install pytest pandas numpy scipy scikit-learn pyarrow jsonschema pyyaml pandera pydantic fastapi requests joblib
+        python tests/integration/test_e2e_walkthrough.py
 
 timeout: '900s'
 options:

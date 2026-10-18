@@ -74,10 +74,66 @@ resource "google_cloud_run_v2_service" "analyst" {
   }
 }
 
+# Authenticated Pub/Sub push endpoint that launches Vertex AI training runs.
+resource "google_cloud_run_v2_service" "trigger" {
+  name     = "churnops-trigger"
+  location = var.region
+  project  = var.project_id
+
+  template {
+    service_account = var.service_account_emails["trigger"]
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 2
+    }
+    containers {
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/churnops-docker/trigger:${var.image_tag}"
+      resources {
+        limits = {
+          cpu    = "1000m"
+          memory = "512Mi"
+        }
+      }
+      env {
+        name  = "PROJECT_ID"
+        value = var.project_id
+      }
+      env {
+        name  = "REGION"
+        value = var.region
+      }
+      env {
+        name  = "PIPELINE_ROOT"
+        value = "gs://${var.project_id}-artifacts/pipelines"
+      }
+      env {
+        name  = "ARTIFACTS_BUCKET"
+        value = "${var.project_id}-artifacts"
+      }
+      env {
+        name  = "PIPELINE_SERVICE_ACCOUNT"
+        value = var.service_account_emails["pipeline"]
+      }
+    }
+  }
+}
+
+resource "google_cloud_run_v2_service_iam_member" "trigger_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.trigger.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${var.service_account_emails["trigger"]}"
+}
+
 output "serving_url" {
   value = google_cloud_run_v2_service.serving.uri
 }
 
 output "analyst_url" {
   value = google_cloud_run_v2_service.analyst.uri
+}
+
+output "trigger_url" {
+  value = google_cloud_run_v2_service.trigger.uri
 }

@@ -53,12 +53,12 @@ module "artifact_registry" {
 
 # 6. Cloud Run Services & IAM
 module "cloud_run" {
-  source                = "../../modules/cloud_run_service"
-  project_id            = var.project_id
-  region                = var.region
-  image_tag             = var.image_tag
+  source                 = "../../modules/cloud_run_service"
+  project_id             = var.project_id
+  region                 = var.region
+  image_tag              = var.image_tag
   service_account_emails = module.iam.service_accounts
-  depends_on            = [module.apis, module.artifact_registry, module.iam]
+  depends_on             = [module.apis, module.artifact_registry, module.iam]
 }
 
 # 7. Secrets
@@ -89,4 +89,35 @@ module "iam" {
   topic_ids       = module.pubsub.topic_ids
   slack_secret_id = module.secrets.slack_secret_id
   depends_on      = [module.apis]
+}
+
+data "google_project" "current" {
+  project_id = var.project_id
+}
+
+# Authenticated push delivery from drift detection to the Vertex dispatcher.
+resource "google_service_account_iam_member" "pubsub_push_token_creator" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${module.iam.service_accounts["trigger"]}"
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+}
+
+resource "google_pubsub_subscription" "training_trigger" {
+  name    = "drift-detected-trigger"
+  topic   = module.pubsub.topic_ids["drift-detected"]
+  project = var.project_id
+
+  ack_deadline_seconds = 60
+  push_config {
+    push_endpoint = module.cloud_run.trigger_url
+    oidc_token {
+      service_account_email = module.iam.service_accounts["trigger"]
+      audience              = module.cloud_run.trigger_url
+    }
+  }
+  dead_letter_policy {
+    dead_letter_topic     = "projects/${var.project_id}/topics/churnops-dead-letter"
+    max_delivery_attempts = 5
+  }
+  depends_on = [google_service_account_iam_member.pubsub_push_token_creator]
 }

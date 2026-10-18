@@ -1,0 +1,59 @@
+name: ChurnOps CI
+
+on:
+  pull_request:
+    paths:
+      - "**/*.py"
+      - "**/*.yaml"
+      - "**/*.yml"
+      - "**/*.tf"
+      - "**/Dockerfile"
+      - "contracts/**"
+      - "pyproject.toml"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project and development dependencies
+        run: make setup && python -m pip install kfp
+      - name: Lint
+        run: ruff check ops/trigger_fn ml/pipeline/pipeline.py
+      - name: Type check P3 integration
+        run: mypy --explicit-package-bases --ignore-missing-imports ops/trigger_fn/main.py ml/pipeline/pipeline.py
+      - name: Compile Python modules
+        run: python -m compileall -q data ml llm ops scripts tests
+      - name: Unit tests
+        run: python -m pytest tests/unit -q
+      - name: Contracts
+        run: python tests/integration/test_contracts.py
+      - name: LLM prompt evaluations
+        run: python llm/evals/eval_runner.py
+      - name: Walking skeleton
+        run: python tests/integration/test_e2e_walkthrough.py
+      - name: Compile Vertex AI pipeline
+        run: python ml/pipeline/pipeline.py
+      - name: Terraform format and validate
+        shell: bash
+        run: |
+          terraform fmt -check -recursive infra
+          terraform -chdir=infra/envs/dev init -backend=false -input=false
+          terraform -chdir=infra/envs/dev validate
+      - name: Build platform containers
+        run: |
+          docker build -f data/generator/Dockerfile -t churnops/generator:ci .
+          docker build -f data/ingest/Dockerfile -t churnops/ingest:ci .
+          docker build -f data/drift/Dockerfile -t churnops/drift:ci .
+          docker build -t churnops/serving:ci ml/serving
+          docker build -f llm/analyst/Dockerfile -t churnops/analyst:ci .
+          docker build -f ops/trigger_fn/Dockerfile -t churnops/trigger:ci ops/trigger_fn

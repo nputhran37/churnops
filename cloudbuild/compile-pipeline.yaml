@@ -1,0 +1,20 @@
+steps:
+  - name: python:3.11-slim
+    id: compile-kfp
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install --no-cache-dir 'kfp>=2.7,<3'
+        python ml/pipeline/pipeline.py
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: upload-kfp
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gsutil cp ml/pipeline/churn_pipeline.yaml gs://${PROJECT_ID}-artifacts/pipelines/churn_retraining_${BUILD_ID}.yaml
+        gsutil cp ml/pipeline/churn_pipeline.yaml gs://${PROJECT_ID}-artifacts/pipelines/churn_retraining_latest.yaml
+timeout: 1800s
+options:
+  logging: CLOUD_LOGGING_ONLY

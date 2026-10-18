@@ -50,12 +50,16 @@ steps:
     args: ['build', '-f', 'llm/analyst/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/analyst:latest', '.']
 
   - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-trigger'
+    args: ['build', '-f', 'ops/trigger_fn/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/trigger:${COMMIT_SHA}', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/trigger:latest', 'ops/trigger_fn']
+
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'push-images'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        for service in generator ingest drift serving analyst; do
+        for service in generator ingest drift serving analyst trigger; do
           docker push --all-tags ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY}/$$service
         done
 

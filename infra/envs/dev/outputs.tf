@@ -30,6 +30,10 @@ output "analyst_url" {
   value = module.cloud_run.analyst_url
 }
 
+output "trigger_url" {
+  value = module.cloud_run.trigger_url
+}
+
 output "monitoring_dashboard_ids" {
   value = module.monitoring.dashboard_ids
 }
