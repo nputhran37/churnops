@@ -12,7 +12,8 @@ resource "google_storage_bucket" "landing" {
   name                        = "${var.project_id}-landing"
   location                    = var.region
   uniform_bucket_level_access = true
-  force_destroy               = true
+  public_access_prevention    = "enforced"
+  force_destroy               = false
 
   lifecycle_rule {
     condition {
@@ -39,7 +40,8 @@ resource "google_storage_bucket" "quarantine" {
   name                        = "${var.project_id}-quarantine"
   location                    = var.region
   uniform_bucket_level_access = true
-  force_destroy               = true
+  public_access_prevention    = "enforced"
+  force_destroy               = false
 
   lifecycle_rule {
     condition {
@@ -56,10 +58,11 @@ resource "google_storage_bucket" "artifacts" {
   name                        = "${var.project_id}-artifacts"
   location                    = var.region
   uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
   versioning {
     enabled = true
   }
-  force_destroy = true
+  force_destroy = false
 }
 
 # 4. Reports Bucket
@@ -67,7 +70,8 @@ resource "google_storage_bucket" "reports" {
   name                        = "${var.project_id}-reports"
   location                    = var.region
   uniform_bucket_level_access = true
-  force_destroy               = true
+  public_access_prevention    = "enforced"
+  force_destroy               = false
 
   lifecycle_rule {
     condition {

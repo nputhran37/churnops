@@ -194,3 +194,7 @@ what to do when a batch is quarantined.
 | `make test-llm` | 30-case golden benchmark scoring prompt faithfulness, coverage and actionability |
 | `make test-e2e` | End-to-end walking skeleton across all three roles in a temporary workspace |
 | `make terraform-plan` | Dry-run Terraform plan against the dev environment |
+
+### Platform monitoring setup (Person 3)
+
+Terraform creates the Cloud Monitoring dashboards and baseline alerts from `ops/dashboards/`. To receive alert notifications, create a notification channel in Cloud Monitoring and pass its full resource name through `notification_channels` in `infra/envs/dev/terraform.tfvars` (for example, `projects/<project-id>/notificationChannels/<channel-id>`). The example defaults to an empty list, so incidents remain visible in Monitoring but are not sent to an email or messaging destination until a channel is configured.

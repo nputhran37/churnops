@@ -29,3 +29,11 @@ output "serving_url" {
 output "analyst_url" {
   value = module.cloud_run.analyst_url
 }
+
+output "monitoring_dashboard_ids" {
+  value = module.monitoring.dashboard_ids
+}
+
+output "monitoring_alert_policy_ids" {
+  value = module.monitoring.alert_policy_ids
+}

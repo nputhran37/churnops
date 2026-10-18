@@ -65,3 +65,11 @@ module "secrets" {
   project_id = var.project_id
   depends_on = [module.apis]
 }
+
+# 8. Monitoring dashboards and SLO / dead-letter alerts
+module "monitoring" {
+  source                = "../../modules/monitoring"
+  project_id            = var.project_id
+  notification_channels = var.notification_channels
+  depends_on            = [module.apis, module.cloud_run, module.pubsub]
+}

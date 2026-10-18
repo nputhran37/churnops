@@ -1,3 +1,4 @@
-project_id = "my-gcp-churnops-project"
+project_id = "churnops-512010"
 region     = "us-central1"
 image_tag  = "latest"
+notification_channels = []
