@@ -103,12 +103,8 @@ def run_simulation(scenario: str = "price_hike", severity: float = 0.8, batch_si
     ok(f"Validation passed · raw_events {ingest_result['load_mode']} · features_daily rebuilt")
     ok("Published data.batch.landed")
 
-    # ---- 3. drift ------------------------------------------------------
-    policy = detector.load_policy()
-    if ignore_cooldown:
-        policy = dict(policy)
-        policy["cooldown"] = {"hours": 0}
-    drift = detector.run_drift_analysis(current_batch_path=batch["parquet_path"], policy=policy)
+    phase(3, "Drift service compares the batch against the frozen reference window")
+    drift = detector.run_drift_analysis(current_batch_path=batch["parquet_path"], ignore_cooldown=ignore_cooldown)
     top = drift["report"]["features"][0]
     ok(f"Verdict: {drift['severity'].upper()} · {drift['share_drifted'] * 100:.0f}% of features drifted")
     ok(f"Top drifted: {top['feature']} ({top['metric']}={top['score']}) · {top['change_summary']}")

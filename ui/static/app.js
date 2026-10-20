@@ -66,8 +66,10 @@ function initEventListeners() {
   document.getElementById("btn-reset-seed").addEventListener("click", async () => {
     appendConsole("[ACTION] Resetting state and re-bootstrapping seed data...", "system");
     try {
-      await fetch("/api/status");
-      alert("State reloaded! You can run a clean simulation now.");
+      const res = await fetch("/api/reset", { method: "POST" });
+      const data = await res.json();
+      appendConsole(`[OK] ${data.message}`, "success");
+      alert("State reset and seed data bootstrapped successfully!");
       loadStatus();
     } catch (err) {
       alert("Reset failed: " + err);
@@ -117,7 +119,7 @@ async function handleRunSimulation() {
     const response = await fetch("/api/simulate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenario, severity, batch_size: batchSize })
+      body: JSON.stringify({ scenario, severity, batch_size: batchSize, ignore_cooldown: true })
     });
     const data = await response.json();
     const res = data.simulation_result;

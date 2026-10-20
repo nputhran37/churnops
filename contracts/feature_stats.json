@@ -40,7 +40,7 @@
       "mode": "0"
     },
     "streaming_movies": {
-      "mode": "No"
+      "mode": "Yes"
     },
     "streaming_tv": {
       "mode": "No"
@@ -52,19 +52,19 @@
   "fitted_from": "synthetic:telco-priors",
   "numeric": {
     "monthly_charges": {
-      "mean": 61.3232,
-      "median": 62.135,
-      "std": 25.45
+      "mean": 61.6132,
+      "median": 62.31,
+      "std": 25.5631
     },
     "tenure": {
-      "mean": 33.4403,
+      "mean": 33.4164,
       "median": 31.0,
-      "std": 22.613
+      "std": 22.916
     },
     "total_charges": {
-      "mean": 2029.1275,
-      "median": 1592.69,
-      "std": 1702.6784
+      "mean": 2060.4571,
+      "median": 1586.935,
+      "std": 1757.8438
     }
   },
   "version": "1.0.0"

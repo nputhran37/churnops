@@ -261,8 +261,12 @@ def run_drift_analysis(
     warehouse_dir: str | None = None,
     publish: bool = True,
     now: datetime.datetime | None = None,
+    ignore_cooldown: bool = False,
 ) -> dict:
     policy = load_policy(policy_path)
+    if ignore_cooldown:
+        policy = dict(policy)
+        policy["cooldown"] = {"hours": 0}
     contract = load_feature_contract()
     warehouse = Warehouse.default(root=warehouse_dir)
     reports = Storage.for_role("reports", local_root=reports_dir)

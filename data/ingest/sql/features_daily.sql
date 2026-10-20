@@ -21,7 +21,7 @@ USING (
     IFNULL(`contract`, 'Month-to-month') AS contract,
     CASE WHEN IFNULL(`paperless_billing`, 'Yes') = 'Yes' THEN 1 ELSE 0 END AS paperless_billing_encoded,
     IFNULL(`payment_method`, 'Electronic check') AS payment_method,
-    ROUND((CAST(IFNULL(`monthly_charges`, 62.135) AS FLOAT64) - 61.3232) / 25.45, 4) AS monthly_charges_scaled,
+    ROUND((CAST(IFNULL(`monthly_charges`, 62.31) AS FLOAT64) - 61.6132) / 25.5631, 4) AS monthly_charges_scaled,
     ROUND(LN(1 + IFNULL(CAST(`total_charges` AS FLOAT64), 0.0)), 4) AS total_charges_log1p,
     churn,
     customer_segment,

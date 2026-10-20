@@ -232,6 +232,16 @@ def get_report_html(batch_id: str):
     raise HTTPException(status_code=404, detail=f"Report for batch {batch_id} not found.")
 
 
+@app.post("/api/reset")
+def reset_state():
+    from bootstrap_seed import bootstrap
+    bootstrap(history_days=20, rows_per_day=600)
+    global _CACHED_MODEL, _CACHED_MODEL_VERSION
+    _CACHED_MODEL = None
+    _CACHED_MODEL_VERSION = None
+    return {"status": "ok", "message": "State reset and seed bootstrapped successfully."}
+
+
 def start():
     uvicorn.run("ui.server:app", host="127.0.0.1", port=8000, reload=False)
 
