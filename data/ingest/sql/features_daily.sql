@@ -1,6 +1,6 @@
 -- Generated from contracts/features.yaml v1.0.0 by data/common/features.py
 -- Idempotent: re-running a batch replaces its rows instead of duplicating them.
-MERGE `churnops-512010.churnops.features_daily` AS target
+MERGE `churnops-dev.churnops.features_daily` AS target
 USING (
   SELECT
     CAST(customer_id AS STRING) AS customer_id,
@@ -28,7 +28,7 @@ USING (
     batch_date,
     batch_id,
     trace_id
-  FROM `churnops-512010.churnops.raw_events`
+  FROM `churnops-dev.churnops.raw_events`
   WHERE batch_id = @batch_id
 ) AS source
 ON target.batch_id = source.batch_id AND target.customer_id = source.customer_id
