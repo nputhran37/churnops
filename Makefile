@@ -1,4 +1,4 @@
-.PHONY: help setup seed eda inject-drift ingest detect-drift realised-performance refresh-reference simulate \
+.PHONY: help setup seed eda inject-drift ingest detect-drift realised-performance refresh-reference simulate ui \
         test test-unit test-contracts test-e2e test-llm lint terraform-bootstrap terraform-init terraform-plan clean
 
 PYTHON ?= python
@@ -76,6 +76,9 @@ realised-performance:
 # ---------------------------------------------------------------- platform
 simulate:
 	$(PYTHON) scripts/simulate_walking_skeleton.py --scenario $(SCENARIO) --severity $(SEVERITY)
+
+ui:
+	$(PYTHON) ui/server.py
 
 test: test-contracts test-unit test-llm test-e2e
 

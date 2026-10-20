@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChurnOps — Automated MLOps Pipeline & Drift Alerts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <!-- Background Glow Accents -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-glow bg-glow-3"></div>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+          <circle cx="12" cy="12" r="4"></circle>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">ChurnOps</div>
+        <div class="brand-subtitle">Automated Continuous Training & Drift Platform</div>
+      </div>
+    </div>
+
+    <div class="nav-metrics">
+      <div class="metric-chip">
+        <span class="pulse-indicator"></span>
+        <span class="chip-label">Platform:</span>
+        <span class="chip-value text-emerald">MLOps Level 2</span>
+      </div>
+      <div class="metric-chip">
+        <span class="chip-label">Champion:</span>
+        <span class="chip-value" id="nav-champion-version">Loading...</span>
+      </div>
+      <div class="metric-chip">
+        <span class="chip-label">Reference Window:</span>
+        <span class="chip-value" id="nav-reference-rows">... rows</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-reset-seed" title="Reset and bootstrap seed data">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+        </svg>
+        Reset State
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    
+    <!-- Hero / Control Center -->
+    <section class="control-panel glass-card">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="badge badge-accent">Mission Control</span>
+          <h2>Drift Injection & Autonomous Orchestration</h2>
+          <p class="panel-desc">Select an upstream data or business shift to test the zero-human-in-the-loop retraining and quality gating loop.</p>
+        </div>
+      </div>
+
+      <div class="control-grid">
+        <!-- Scenario Selector -->
+        <div class="control-col">
+          <label class="control-label" for="scenario-select">Drift Scenario</label>
+          <div class="select-wrapper">
+            <select id="scenario-select" class="form-select">
+              <option value="price_hike" selected>Price Hike (+25% Monthly Charges)</option>
+              <option value="competitor_launch">Competitor Launch (Tenure & Usage drop)</option>
+              <option value="seasonal_spike">Seasonal Spike (Holiday streaming bundle)</option>
+              <option value="new_plan">New Plan (Unseen category - Pandera quarantine)</option>
+              <option value="corrupt_batch">Corrupt Batch (Upstream ETL failure)</option>
+              <option value="none">Stationary (Stationary baseline - Zero drift)</option>
+            </select>
+          </div>
+          <div class="scenario-narrative" id="scenario-narrative-text">
+            Finance increased list prices across all plans. MonthlyCharges will breach the 0.20 PSI threshold and trigger automatic retraining.
+          </div>
+        </div>
+
+        <!-- Severity Slider -->
+        <div class="control-col">
+          <div class="slider-header">
+            <label class="control-label" for="severity-slider">Drift Severity (Knob)</label>
+            <span class="slider-val" id="severity-val">0.80</span>
+          </div>
+          <input type="range" id="severity-slider" min="0.1" max="1.0" step="0.05" value="0.80" class="form-range">
+          <div class="range-labels">
+            <span>0.1 (Subtle)</span>
+            <span>0.5 (Moderate)</span>
+            <span>1.0 (Critical)</span>
+          </div>
+        </div>
+
+        <!-- Batch Size -->
+        <div class="control-col">
+          <label class="control-label" for="batch-size-input">Batch Row Volume</label>
+          <div class="select-wrapper">
+            <select id="batch-size-input" class="form-select">
+              <option value="800">800 subscribers</option>
+              <option value="1500" selected>1,500 subscribers</option>
+              <option value="2500">2,500 subscribers</option>
+            </select>
+          </div>
+          <div class="helper-text">Delayed churn labels held for 14 simulated days.</div>
+        </div>
+
+        <!-- Action Trigger -->
+        <div class="control-col control-col-btn">
+          <button class="btn btn-primary btn-glow" id="btn-trigger-simulation">
+            <span class="btn-icon">⚡</span>
+            <span class="btn-text">Inject Drift & Run Pipeline</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8-Phase Visual Pipeline Flow -->
+    <section class="pipeline-section">
+      <div class="section-header">
+        <h3>End-to-End Autonomous Pipeline Timeline</h3>
+        <span class="pipeline-status-badge" id="overall-status-badge">Ready</span>
+      </div>
+
+      <div class="pipeline-stepper" id="pipeline-stepper">
+        <!-- Step 1 -->
+        <div class="step-card" id="step-0">
+          <div class="step-icon">0</div>
+          <div class="step-body">
+            <div class="step-title">Platform State</div>
+            <div class="step-subtitle" id="step-0-sub">Checking champion model</div>
+          </div>
+          <div class="step-pill" id="step-0-pill">Ready</div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-card" id="step-1">
+          <div class="step-icon">1</div>
+          <div class="step-body">
+            <div class="step-title">Drift Injected</div>
+            <div class="step-subtitle" id="step-1-sub">Generator samples batch</div>
+          </div>
+          <div class="step-pill" id="step-1-pill">Idle</div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-card" id="step-2">
+          <div class="step-icon">2</div>
+          <div class="step-body">
+            <div class="step-title">Ingest & Validation</div>
+            <div class="step-subtitle" id="step-2-sub">Pandera schema rules</div>
+          </div>
+          <div class="step-pill" id="step-2-pill">Idle</div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step-card" id="step-3">
+          <div class="step-icon">3</div>
+          <div class="step-body">
+            <div class="step-title">Drift Detection</div>
+            <div class="step-subtitle" id="step-3-sub">PSI & Jensen-Shannon</div>
+          </div>
+          <div class="step-pill" id="step-3-pill">Idle</div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step-card" id="step-4">
+          <div class="step-icon">4</div>
+          <div class="step-body">
+            <div class="step-title">Drift Analyst</div>
+            <div class="step-subtitle" id="step-4-sub">Gemini + Guardrails</div>
+          </div>
+          <div class="step-pill" id="step-4-pill">Idle</div>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="step-card" id="step-5">
+          <div class="step-icon">5</div>
+          <div class="step-body">
+            <div class="step-title">Continuous Training</div>
+            <div class="step-subtitle" id="step-5-sub">Vertex AI Pipeline</div>
+          </div>
+          <div class="step-pill" id="step-5-pill">Idle</div>
+        </div>
+
+        <!-- Step 7 -->
+        <div class="step-card" id="step-6">
+          <div class="step-icon">6</div>
+          <div class="step-body">
+            <div class="step-title">Canary Delivery</div>
+            <div class="step-subtitle" id="step-6-sub">10% &rarr; 50% &rarr; 100%</div>
+          </div>
+          <div class="step-pill" id="step-6-pill">Idle</div>
+        </div>
+
+        <!-- Step 8 -->
+        <div class="step-card" id="step-7">
+          <div class="step-icon">7</div>
+          <div class="step-body">
+            <div class="step-title">Realised AUC</div>
+            <div class="step-subtitle" id="step-7-sub">Delayed label backfill</div>
+          </div>
+          <div class="step-pill" id="step-7-pill">Idle</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Results Grid -->
+    <div class="results-grid">
+
+      <!-- Left Column: LLM Analyst & Quality Gate -->
+      <div class="results-col">
+        
+        <!-- LLM Analyst Card -->
+        <div class="glass-card analyst-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="badge badge-purple">LLMOps Layer</span>
+              <h3>Drift Analyst Intelligence Report</h3>
+            </div>
+            <span class="badge badge-success" id="guardrail-badge">🛡️ Numeric Guardrail Verified</span>
+          </div>
+
+          <div class="analyst-content" id="analyst-content-body">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <p>Run a simulation above to generate an LLM narrative explaining the incident in plain English.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quality Gate & Model Card -->
+        <div class="glass-card quality-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="badge badge-cyan">ML Plane</span>
+              <h3>Quality Gate & Model Promotion</h3>
+            </div>
+            <span class="badge badge-neutral" id="gate-status-pill">No Run Yet</span>
+          </div>
+
+          <div class="gate-grid">
+            <div class="gate-stat-box">
+              <div class="stat-num" id="stat-champion-auc">0.8100</div>
+              <div class="stat-lbl">Champion ROC-AUC</div>
+            </div>
+            <div class="gate-stat-box">
+              <div class="stat-num text-cyan" id="stat-challenger-auc">--</div>
+              <div class="stat-lbl">Challenger ROC-AUC</div>
+            </div>
+            <div class="gate-stat-box">
+              <div class="stat-num text-emerald" id="stat-brier-score">--</div>
+              <div class="stat-lbl">Brier Score (Calibration)</div>
+            </div>
+            <div class="gate-stat-box">
+              <div class="stat-num" id="stat-gate-decision">--</div>
+              <div class="stat-lbl">Gate Decision</div>
+            </div>
+          </div>
+
+          <div class="canary-progress-bar-wrap">
+            <div class="canary-lbls">
+              <span>Canary Rollout Progress</span>
+              <span id="canary-pct-text">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="canary-progress-fill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Statistical Drift & Single Customer Inference -->
+      <div class="results-col">
+
+        <!-- Drift Statistical Breakdown -->
+        <div class="glass-card telemetry-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="badge badge-amber">Data Plane</span>
+              <h3>Statistical Drift Telemetry</h3>
+            </div>
+            <button class="btn btn-outline btn-sm" id="btn-open-html-report" disabled>
+              Full HTML Report ↗
+            </button>
+          </div>
+
+          <div class="drift-stat-summary">
+            <div class="summary-item">
+              <span class="summary-lbl">Overall Verdict:</span>
+              <span class="summary-val badge badge-danger" id="drift-verdict-val">--</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-lbl">Share Drifted:</span>
+              <span class="summary-val" id="drift-share-val">--%</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-lbl">Prediction Drift p-val:</span>
+              <span class="summary-val" id="prediction-drift-val">--</span>
+            </div>
+          </div>
+
+          <!-- Feature Drift Table -->
+          <div class="table-container">
+            <table class="telemetry-table" id="features-drift-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Metric</th>
+                  <th>Score</th>
+                  <th>Threshold</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="features-table-body">
+                <tr>
+                  <td colspan="5" class="text-center text-muted">Awaiting simulation execution...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Live Customer Churn Predictor -->
+        <div class="glass-card predictor-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="badge badge-emerald">Serving API</span>
+              <h3>Single Customer Churn Prediction</h3>
+            </div>
+            <span class="badge badge-neutral" id="predictor-model-badge">Active Model</span>
+          </div>
+
+          <form id="customer-predict-form" class="predict-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Tenure (Months)</label>
+                <input type="number" id="pred-tenure" value="2" min="1" max="72" class="form-input">
+              </div>
+              <div class="form-group">
+                <label>Monthly Charges ($)</label>
+                <input type="number" id="pred-monthly" value="89.5" step="0.5" class="form-input">
+              </div>
+              <div class="form-group">
+                <label>Total Charges ($)</label>
+                <input type="number" id="pred-total" value="179.0" step="1.0" class="form-input">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Contract Type</label>
+                <select id="pred-contract" class="form-select">
+                  <option value="Month-to-month" selected>Month-to-month</option>
+                  <option value="One year">One year</option>
+                  <option value="Two year">Two year</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Internet Service</label>
+                <select id="pred-internet" class="form-select">
+                  <option value="Fiber optic" selected>Fiber optic</option>
+                  <option value="DSL">DSL</option>
+                  <option value="No">None</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Payment Method</label>
+                <select id="pred-payment" class="form-select">
+                  <option value="Electronic check" selected>Electronic check</option>
+                  <option value="Mailed check">Mailed check</option>
+                  <option value="Bank transfer (automatic)">Bank transfer</option>
+                  <option value="Credit card (automatic)">Credit card</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-footer">
+              <button type="submit" class="btn btn-emerald btn-sm" id="btn-run-prediction">
+                <span>🔮 Calculate Churn Risk</span>
+              </button>
+              
+              <div class="prediction-result-display" id="prediction-result-box" style="display: none;">
+                <div class="prediction-prob" id="pred-prob-text">--%</div>
+                <div class="prediction-meta">
+                  <span class="badge" id="pred-risk-badge">HIGH RISK</span>
+                  <span class="latency-text" id="pred-latency-text">&lt; 15 ms</span>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Live Execution Logs Console -->
+    <section class="glass-card console-card">
+      <div class="card-header console-header">
+        <div class="card-title-group">
+          <span class="badge badge-neutral">Telemetry Log Stream</span>
+          <h3>Trace & Service Audit Stream</h3>
+        </div>
+        <div class="console-actions">
+          <button class="btn btn-secondary btn-xs" id="btn-clear-console">Clear</button>
+        </div>
+      </div>
+      <div class="console-output" id="console-output-box">
+        <div class="console-line system">[SYSTEM] ChurnOps Level-2 Autonomous Platform Online. Ready for simulation.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Embedded Report Modal -->
+  <div class="modal-overlay" id="report-modal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h4>Evidently Drift Report</h4>
+        <button class="modal-close" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <iframe id="report-iframe" src="about:blank"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
